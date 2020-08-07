@@ -101,11 +101,11 @@ export function checkZowe(command: Command, _zosmfProfiles: string[]) {
   try {
     const zosmfProfiles = zoweSync('profiles list zosmf-profiles', {logOutput: false}).data as []
     debug(zosmfProfiles)
-    if (zosmfProfiles.length === 0) {
-      command.error(
-        'No zosmf-profile defined in Zowe CLI. Use "zowe profiles create zosmf-profile" to define it'
-      )
-    }
+    // if (zosmfProfiles.length === 0) {
+    //   command.error(
+    //     'No zosmf-profile defined in Zowe CLI. Use "zowe profiles create zosmf-profile" to define it'
+    //   )
+    // }
   } catch (error) {
     if (error.message.indexOf('command not found') > -1) {
       command.error('Zowe CLI is not installed. Use "npm install -g @zowe/cli" to install it')
