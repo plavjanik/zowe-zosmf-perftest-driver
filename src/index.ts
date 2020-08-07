@@ -1,11 +1,11 @@
 import {Command, flags} from '@oclif/command'
-import {existsSync, readFileSync, writeFileSync} from "fs";
-import {resolve} from "path";
-import {checkZowe, zoweSync} from "./zowe";
-import * as tmp from "tmp";
-const filesizeParser = require('filesize-parser');
+import {existsSync, readFileSync, writeFileSync} from 'fs'
+import {resolve} from 'path'
+import {checkZowe} from './zowe'
+import * as tmp from 'tmp'
+const filesizeParser = require('filesize-parser')
 
-interface ITestDefinition {
+interface TestDefinition {
   name: string;
   fileSize: string;
   memberSize: string;
@@ -27,7 +27,7 @@ class Zztop extends Command {
     help: flags.help({char: 'h'}),
   }
 
-  static args = [{name: 'file', required: true, description: 'Test definition file',}]
+  static args = [{name: 'file', required: true, description: 'Test definition file'}]
 
   async run() {
     const {args} = this.parse(Zztop)
@@ -36,12 +36,12 @@ class Zztop extends Command {
     if (!existsSync(args.file)) {
       this.error(`File ${resolve(args.file)} does not exist`)
     }
-    const testDefinition: ITestDefinition = JSON.parse(readFileSync(args.file, "utf8"))
+    const testDefinition: TestDefinition = JSON.parse(readFileSync(args.file, 'utf8'))
     this.log(`${JSON.stringify(testDefinition, null, 2)}`)
 
     checkZowe(this, testDefinition.zosmfProfiles)
 
-    const tmpCobolPath = tmp.tmpNameSync();
+    const tmpCobolPath = tmp.tmpNameSync()
     const lineCount = filesizeParser(testDefinition.memberSize) / 80
     const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000".repeat(lineCount)
     writeFileSync(tmpCobolPath, result)

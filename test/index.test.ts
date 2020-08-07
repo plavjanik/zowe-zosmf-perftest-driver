@@ -6,14 +6,13 @@ describe('zztop', () => {
   test
   .stdout()
   .do(() => cmd.run([]))
-  .it('runs hello', ctx => {
-    expect(ctx.stdout).to.contain('hello world')
-  })
+  .exit(2)
+  .it('fails without arguments')
 
   test
   .stdout()
-  .do(() => cmd.run(['--name', 'jeff']))
-  .it('runs hello --name jeff', ctx => {
-    expect(ctx.stdout).to.contain('hello jeff')
+  .do(() => cmd.run(['test/testdef.json']))
+  .it('runs testdef.json', ctx => {
+    expect(ctx.stdout).to.contain('Test definition file: test/testdef.json')
   })
 })
