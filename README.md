@@ -21,9 +21,9 @@ $ zztop COMMAND
 running command...
 $ zztop (-v|--version|version)
 zztop/0.0.0 darwin-x64 node-v10.20.1
-$ zztop --help [COMMAND]
+$ zztop --help 
 USAGE
-  $ zztop COMMAND
+  $ zztop FILE
 ...
 ```
 <!-- usagestop -->

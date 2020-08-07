@@ -1,0 +1,13 @@
+{
+  "name": "basic",
+  "fileSize": "10k",
+  "memberSize": "10k",
+  "jobOutputSize": "10k",
+  "tsoCommandOutputSize": "1k",
+  "duration": "1h",
+  "commandDelay": "1s",
+  "scriptDelay": "5s",
+  "concurrentUsers": 10,
+  "zosmfProfiles": ["ca32"],
+  "dsnSecondSegment": "ZZTOP"
+}
