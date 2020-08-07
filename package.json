@@ -1,0 +1,55 @@
+{
+  "name": "zztop",
+  "description": "Zowe z/OSMF Test of Performance",
+  "version": "0.0.0",
+  "author": "Petr Plavjanik @plavjanik",
+  "bin": {
+    "zztop": "./bin/run"
+  },
+  "bugs": "https://github.com/plavjanik/zowe-zosmf-perftest-driver/issues",
+  "dependencies": {
+    "@oclif/command": "^1.8.0",
+    "@oclif/config": "^1.17.0",
+    "@oclif/plugin-help": "^3.2.0",
+    "tslib": "^1.13.0"
+  },
+  "devDependencies": {
+    "@oclif/dev-cli": "^1.22.2",
+    "@oclif/test": "^1.2.6",
+    "@types/chai": "^4.2.12",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^10.17.28",
+    "chai": "^4.2.0",
+    "eslint": "^5.16.0",
+    "eslint-config-oclif": "^3.1.0",
+    "eslint-config-oclif-typescript": "^0.1.0",
+    "mocha": "^5.2.0",
+    "nyc": "^14.1.1",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "/bin",
+    "/lib"
+  ],
+  "homepage": "https://github.com/plavjanik/zowe-zosmf-perftest-driver",
+  "keywords": [
+    "oclif"
+  ],
+  "license": "EPL-2.0",
+  "main": "lib/index.js",
+  "oclif": {
+    "bin": "zztop"
+  },
+  "repository": "plavjanik/zowe-zosmf-perftest-driver",
+  "scripts": {
+    "posttest": "eslint . --ext .ts --config .eslintrc",
+    "prepack": "rm -rf lib && tsc -b && oclif-dev readme",
+    "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
+    "version": "oclif-dev readme && git add README.md"
+  },
+  "types": "lib/index.d.ts"
+}
