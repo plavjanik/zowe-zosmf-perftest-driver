@@ -57,6 +57,7 @@ class Zztop extends Command {
 
   async userActivity(userNumber: number, testDefinition: TestDefinition, zosmfProfilesByName: { [name: string]: IProfileLoaded }): Promise<ActivityStats> {
     const scriptDelay = parse(testDefinition.scriptDelay) || 1000
+    const commandDelay = parse(testDefinition.commandDelay) || 1000
     const duration = parse(testDefinition.duration) || 1000
     await sleep(scriptDelay * userNumber)
 
@@ -89,6 +90,8 @@ class Zztop extends Command {
     let failedRequests = 0
     const startTime = new Date().getTime()
     while (new Date().getTime() - startTime <= duration) {
+      const scriptStartTime = new Date().getTime()
+      const commandStartTime = new Date().getTime()
       PerfTiming.api.mark('BeforeDatasetUpload')
       const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)') // eslint-disable-line no-await-in-loop
       PerfTiming.api.mark('AfterDatasetUpload')
@@ -100,7 +103,8 @@ class Zztop extends Command {
         failedRequests++
       }
 
-      await sleep(scriptDelay) // eslint-disable-line no-await-in-loop
+      await sleep(Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)) // eslint-disable-line no-await-in-loop
+      await sleep(Math.max(scriptDelay - (new Date().getTime() - scriptStartTime), 0)) // eslint-disable-line no-await-in-loop
     }
 
     return {failedRequests: failedRequests, successfulRequests: successfulRequests}
