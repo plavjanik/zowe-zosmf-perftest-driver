@@ -58,7 +58,8 @@
   "scripts": {
     "posttest": "eslint . --ext .ts --config .eslintrc",
     "prepack": "rm -rf lib && tsc -b && oclif-dev readme",
-    "test": "cross-env PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
+    "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
+    "perftest": "cross-env PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. ./bin/run test/testdef.json",
     "version": "oclif-dev readme && git add README.md"
   },
   "types": "lib/index.d.ts"

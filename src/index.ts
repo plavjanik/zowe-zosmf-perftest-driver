@@ -81,7 +81,7 @@ class Zztop extends Command {
     if (!exists) {
       const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
       if (!response.success) {
-        this.error(response.commandResponse, {exit: 1})
+        this.error(response.commandResponse, {exit: 2})
       }
     }
 
