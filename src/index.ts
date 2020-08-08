@@ -1,10 +1,11 @@
 import {Command, flags} from '@oclif/command'
-import {existsSync, readFileSync, writeFileSync} from 'fs'
+import {existsSync, readFileSync, promises} from 'fs'
 import {join, resolve} from 'path'
 import * as tmp from 'tmp'
 import {AbstractSession, CliProfileManager, Imperative, ImperativeConfig, IProfileLoaded} from '@zowe/imperative'
 import {Create, CreateDataSetTypeEnum, List, ZosmfSession, Upload, sleep} from '@zowe/cli'
 import {PerfTiming} from '@zowe/perf-timing'
+import parse from 'parse-duration'
 
 const filesizeParser = require('filesize-parser')
 
@@ -16,9 +17,15 @@ interface TestDefinition {
   tsoCommandOutputSize: string;
   duration: string;
   commandDelay: string;
+  scriptDelay: string;
   concurrentUsers: number;
   zosmfProfiles: string[];
   dsnSecondSegment: string;
+}
+
+interface ActivityStats {
+  successfulRequests: number;
+  failedRequests: number;
 }
 
 async function initializeImperative() {
@@ -47,6 +54,57 @@ class Zztop extends Command {
   }
 
   static args = [{name: 'file', required: true, description: 'Test definition file'}]
+
+  async userActivity(userNumber: number, testDefinition: TestDefinition, zosmfProfilesByName: { [name: string]: IProfileLoaded }): Promise<ActivityStats> {
+    const scriptDelay = parse(testDefinition.scriptDelay) || 1000
+    const duration = parse(testDefinition.duration) || 1000
+    await sleep(scriptDelay * userNumber)
+
+    const profileName = testDefinition.zosmfProfiles[userNumber % testDefinition.zosmfProfiles.length]
+    const profile = zosmfProfilesByName[profileName]
+    if (!profile || !profile.profile) {
+      this.error(`Invalid profile name: ${profileName}`)
+      return {failedRequests: 0, successfulRequests: 0}
+    }
+
+    const userid = profile.profile.user
+    this.log(`Userid #${userNumber}: ${userid}`)
+    const session = ZosmfSession.createBasicZosmfSession(profile.profile)
+
+    const tmpCobolPath = tmp.tmpNameSync()
+    const lineCount = filesizeParser(testDefinition.memberSize) / 80
+    const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
+    await promises.writeFile(tmpCobolPath, result)
+    const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + `.U${userNumber}`
+    this.log(testDsn)
+    const exists = await datasetExists(session, testDsn)
+    if (!exists) {
+      const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
+      if (!response.success) {
+        this.error(response.commandResponse, {exit: 1})
+      }
+    }
+
+    let successfulRequests = 0
+    let failedRequests = 0
+    const startTime = new Date().getTime()
+    while (new Date().getTime() - startTime <= duration) {
+      PerfTiming.api.mark('BeforeDatasetUpload')
+      const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)') // eslint-disable-line no-await-in-loop
+      PerfTiming.api.mark('AfterDatasetUpload')
+      PerfTiming.api.measure('DatasetUpload', 'BeforeDatasetUpload', 'AfterDatasetUpload')
+      this.log(JSON.stringify(uploadResponse))
+      if (uploadResponse.success) {
+        successfulRequests++
+      } else {
+        failedRequests++
+      }
+
+      await sleep(scriptDelay) // eslint-disable-line no-await-in-loop
+    }
+
+    return {failedRequests: failedRequests, successfulRequests: successfulRequests}
+  }
 
   async run() {
     const {args} = this.parse(Zztop)
@@ -81,41 +139,25 @@ class Zztop extends Command {
       }
     }
 
-    const profileName = testDefinition.zosmfProfiles[0]
-    const profile = zosmfProfilesByName[profileName]
-    if (profile && profile.profile) {
-      const userid = profile.profile.user
-      this.log(`Userid: ${userid}`)
-      const session = ZosmfSession.createBasicZosmfSession(profile.profile)
-
-      const tmpCobolPath = tmp.tmpNameSync()
-      const lineCount = filesizeParser(testDefinition.memberSize) / 80
-      const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
-      writeFileSync(tmpCobolPath, result)
-      const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + '.TEST1'
-      const exists = await datasetExists(session, testDsn)
-      if (!exists) {
-        const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
-        if (!response.success) {
-          this.error(response.commandResponse, {exit: 1})
-        }
-      }
-      PerfTiming.api.mark('BeforeDatasetUpload')
-      const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(MEMBER1)')
-      PerfTiming.api.mark('AfterDatasetUpload')
-      this.log(JSON.stringify(uploadResponse))
-    } else {
-      this.error(`Invalid profile name: ${profileName}`)
+    const promises: Promise<ActivityStats>[] = []
+    for (let i = 0; i < testDefinition.concurrentUsers; i++) {
+      promises.push(this.userActivity(i, testDefinition, zosmfProfilesByName))
     }
 
-    PerfTiming.api.measure('DatasetUpload', 'BeforeDatasetUpload', 'AfterDatasetUpload')
-    await sleep(1000)
-    this.log(JSON.stringify(PerfTiming.api.getMetrics().measurements, null, 2))
+    const allActivityStats = await Promise.all(promises)
+    const totalActivityStats = {successfulRequests: 0, failedRequests: 0}
+    for (const stats of allActivityStats) {
+      totalActivityStats.successfulRequests += stats.successfulRequests
+      totalActivityStats.failedRequests += stats.failedRequests
+    }
 
-    // const dsn =
-    // if (!zosExistsSync()
-    // zowe  zos-files create data-set-classic NEW.CLASSIC.DATASET
-    // zoweSync(`files upload ftds ${tmpCobolPath} `)
+    await sleep(1000)
+    for (const measurement of PerfTiming.api.getMetrics().measurements) {
+      if (measurement.name === 'DatasetUpload') {
+        this.log(`Average DatasetUpload: ${measurement.averageDuration} ms`)
+      }
+    }
+    this.log('Total activity count', JSON.stringify(totalActivityStats))
   }
 }
 

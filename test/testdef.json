@@ -4,10 +4,10 @@
   "memberSize": "10k",
   "jobOutputSize": "10k",
   "tsoCommandOutputSize": "1k",
-  "duration": "1h",
+  "duration": "15s",
   "commandDelay": "1s",
-  "scriptDelay": "5s",
-  "concurrentUsers": 10,
+  "scriptDelay": "1s",
+  "concurrentUsers": 5,
   "zosmfProfiles": ["zzow01-zowep"],
   "dsnSecondSegment": "ZZTOP"
 }
