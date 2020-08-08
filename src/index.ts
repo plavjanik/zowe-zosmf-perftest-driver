@@ -3,8 +3,8 @@ import {existsSync, readFileSync, writeFileSync} from 'fs'
 import {join, resolve} from 'path'
 import * as tmp from 'tmp'
 import {AbstractSession, CliProfileManager, Imperative, ImperativeConfig, IProfileLoaded} from '@zowe/imperative'
-import {Create, CreateDataSetTypeEnum, List, ZosmfSession, Upload, sleep} from "@zowe/cli";
-import {PerfTiming} from "@zowe/perf-timing";
+import {Create, CreateDataSetTypeEnum, List, ZosmfSession, Upload, sleep} from '@zowe/cli'
+import {PerfTiming} from '@zowe/perf-timing'
 
 const filesizeParser = require('filesize-parser')
 
@@ -24,7 +24,7 @@ interface TestDefinition {
 async function initializeImperative() {
   const mainZoweDir = join(require.resolve('@zowe/cli'), '..', '..', '..', '..');
   (process.mainModule as any).filename = require.resolve('@zowe/cli');
-  ((process.mainModule as any).paths as any).unshift(mainZoweDir);
+  ((process.mainModule as any).paths as any).unshift(mainZoweDir)
   await Imperative.init({configurationModule: require.resolve('@zowe/cli/lib/imperative.js')})
 }
 
@@ -57,23 +57,23 @@ class Zztop extends Command {
     }
 
     if (!PerfTiming.isEnabled) {
-      this.error("PerfTiming is not enabled. Set environment variables: PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=.", {exit: 1})
+      this.error('PerfTiming is not enabled. Set environment variables: PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=.', {exit: 1})
     }
 
     const testDefinition: TestDefinition = JSON.parse(readFileSync(args.file, 'utf8'))
     this.log(`${JSON.stringify(testDefinition, null, 2)}`)
-    await initializeImperative();
+    await initializeImperative()
 
     const profiles = await new CliProfileManager({
       profileRootDirectory: join(ImperativeConfig.instance.cliHome, 'profiles'),
-      type: `zosmf`
-    }).loadAll();
+      type: 'zosmf',
+    }).loadAll()
 
-    const zosmfProfiles = profiles.filter((profile) => {
-      return profile.type === `zosmf`;
-    });
+    const zosmfProfiles = profiles.filter(profile => {
+      return profile.type === 'zosmf'
+    })
 
-    let zosmfProfilesByName: { [name: string]: IProfileLoaded } = {}
+    const zosmfProfilesByName: { [name: string]: IProfileLoaded } = {}
 
     for (const profile of zosmfProfiles) {
       if (profile.name) {
@@ -86,13 +86,13 @@ class Zztop extends Command {
     if (profile && profile.profile) {
       const userid = profile.profile.user
       this.log(`Userid: ${userid}`)
-      const session = ZosmfSession.createBasicZosmfSession(profile.profile);
+      const session = ZosmfSession.createBasicZosmfSession(profile.profile)
 
       const tmpCobolPath = tmp.tmpNameSync()
       const lineCount = filesizeParser(testDefinition.memberSize) / 80
       const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
       writeFileSync(tmpCobolPath, result)
-      const testDsn = userid.toUpperCase() + "." + testDefinition.dsnSecondSegment + ".TEST1"
+      const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + '.TEST1'
       const exists = await datasetExists(session, testDsn)
       if (!exists) {
         const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
@@ -100,18 +100,17 @@ class Zztop extends Command {
           this.error(response.commandResponse, {exit: 1})
         }
       }
-      PerfTiming.api.mark("BeforeDatasetUpload")
-      const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + "(MEMBER1)")
-      PerfTiming.api.mark("AfterDatasetUpload")
+      PerfTiming.api.mark('BeforeDatasetUpload')
+      const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(MEMBER1)')
+      PerfTiming.api.mark('AfterDatasetUpload')
       this.log(JSON.stringify(uploadResponse))
     } else {
       this.error(`Invalid profile name: ${profileName}`)
     }
 
-    PerfTiming.api.measure("DatasetUpload", "BeforeDatasetUpload", "AfterDatasetUpload")
+    PerfTiming.api.measure('DatasetUpload', 'BeforeDatasetUpload', 'AfterDatasetUpload')
     await sleep(1000)
     this.log(JSON.stringify(PerfTiming.api.getMetrics().measurements, null, 2))
-
 
     // const dsn =
     // if (!zosExistsSync()
