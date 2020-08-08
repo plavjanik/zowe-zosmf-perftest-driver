@@ -6,3 +6,5 @@
 /tmp
 /yarn.lock
 node_modules
+imperative_debug.log
+metrics.1.json

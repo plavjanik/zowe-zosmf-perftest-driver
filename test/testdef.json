@@ -8,6 +8,6 @@
   "commandDelay": "1s",
   "scriptDelay": "5s",
   "concurrentUsers": 10,
-  "zosmfProfiles": ["ca32"],
+  "zosmfProfiles": ["zzow01-zowep"],
   "dsnSecondSegment": "ZZTOP"
 }
