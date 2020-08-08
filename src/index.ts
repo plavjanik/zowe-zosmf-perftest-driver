@@ -50,14 +50,16 @@ class Zztop extends Command {
 
   async run() {
     const {args} = this.parse(Zztop)
-    if (!PerfTiming.isEnabled) {
-      this.error("PerfTiming is not enabled. Set environment variables: PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=.", {exit: 1})
-    }
 
     this.log(`Test definition file: ${args.file}`)
     if (!existsSync(args.file)) {
       this.error(`File ${resolve(args.file)} does not exist`)
     }
+
+    if (!PerfTiming.isEnabled) {
+      this.error("PerfTiming is not enabled. Set environment variables: PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=.", {exit: 1})
+    }
+
     const testDefinition: TestDefinition = JSON.parse(readFileSync(args.file, 'utf8'))
     this.log(`${JSON.stringify(testDefinition, null, 2)}`)
     await initializeImperative();

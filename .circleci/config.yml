@@ -40,9 +40,7 @@ workflows:
   version: 2
   "zztop":
     jobs:
-      - node-latest
       - node-12
-      - node-10
       - cache:
           filters:
             tags:
