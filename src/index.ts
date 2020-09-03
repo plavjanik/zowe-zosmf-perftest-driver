@@ -8,7 +8,7 @@ import {
   Imperative,
   ImperativeConfig,
   IProfileLoaded,
-  Session
+  Session,
 } from '@zowe/imperative'
 import {Create, CreateDataSetTypeEnum, Download, List, sleep, Upload, ZosmfSession} from '@zowe/cli'
 import {PerfTiming} from '@zowe/perf-timing'
@@ -75,30 +75,30 @@ class Zztop extends Command {
       return {failedRequests: 0, successfulRequests: 0}
     }
 
-    const driver = this;
+    const driver = this // eslint-disable-line @typescript-eslint/no-this-alias
     const userid = profile.profile.user
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
 
-    const {tmpCobolPath, testDsn} = await this.prepareTestData(testDefinition, userid, userNumber, session);
+    const {tmpCobolPath, testDsn} = await this.prepareTestData(testDefinition, userid, userNumber, session)
 
     const tests = [
       // zowe files upload ftds
       {
-        name: "DatasetUpload", action: async function () {
+        name: 'DatasetUpload', action: async function () {
           const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
           driver.log(JSON.stringify(uploadResponse))
-          return uploadResponse.success;
+          return uploadResponse.success
         },
       },
       // zowe files download ds
       {
-        name: "DatasetDownload", action: async function () {
+        name: 'DatasetDownload', action: async function () {
           const tmpDownloadPath = tmp.tmpNameSync()
           const uploadResponse = await Download.dataSet(session, testDsn + '(TEST1)', {file: tmpDownloadPath})
           driver.log(JSON.stringify(uploadResponse))
           unlinkSync(tmpDownloadPath)
-          return uploadResponse.success;
+          return uploadResponse.success
         },
       },
       // TODO:
@@ -121,13 +121,13 @@ class Zztop extends Command {
       for (const test of tests) {
         const commandStartTime = new Date().getTime()
         PerfTiming.api.mark('Before' + test.name)
-        const success = await test.action();
+        const success = await test.action() // eslint-disable-line no-await-in-loop
         PerfTiming.api.mark('After' + test.name)
         if (success) {
           PerfTiming.api.measure(test.name, 'Before' + test.name, 'After' + test.name)
           successfulRequests++
         } else {
-          PerfTiming.api.measure(test.name + "Failed", 'Before' + test.name, 'After' + test.name)
+          PerfTiming.api.measure(test.name + 'Failed', 'Before' + test.name, 'After' + test.name)
           failedRequests++
         }
 
@@ -186,13 +186,13 @@ class Zztop extends Command {
     }
 
     await sleep(1000)
-    const testNames = ["DatasetUpload", "DatasetDownload"];
+    const testNames = ['DatasetUpload', 'DatasetDownload']
     for (const measurement of PerfTiming.api.getMetrics().measurements) {
       for (const testName of testNames) {
         if (measurement.name === testName) {
           this.log(`Average successful ${testName}: ${measurement.averageDuration} ms`)
         }
-        if (measurement.name === testName + "Failed") {
+        if (measurement.name === testName + 'Failed') {
           this.log(`Average failed ${testName}: ${measurement.averageDuration} ms`)
         }
       }
@@ -214,7 +214,7 @@ class Zztop extends Command {
         this.error(response.commandResponse, {exit: 2})
       }
     }
-    return {tmpCobolPath, testDsn};
+    return {tmpCobolPath, testDsn}
   }
 }
 
