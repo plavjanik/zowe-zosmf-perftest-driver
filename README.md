@@ -9,6 +9,10 @@ Zowe z/OSMF Test of Performance
 [![Downloads/week](https://img.shields.io/npm/dw/zztop.svg)](https://npmjs.org/package/zztop)
 [![License](https://img.shields.io/npm/l/zztop.svg)](https://github.com/plavjanik/zowe-zosmf-perftest-driver/blob/master/package.json)
 
+## Description
+
+<https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfjweIRTk8zRKlBGbh_4/edit?usp=sharing>
+
 ## Requirements
 
 - Node.js 12 and above on any platform 
@@ -48,5 +52,5 @@ Zowe z/OSMF Test of Performance
 4. Run it:
 
     ```bash
-    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test.json
+    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test/testdef.json
     ```

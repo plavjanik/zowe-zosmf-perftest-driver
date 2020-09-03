@@ -6,8 +6,9 @@
   "tsoCommandOutputSize": "1k",
   "duration": "15s",
   "commandDelay": "1s",
-  "scriptDelay": "1s",
+  "scriptDelay": "2s",
   "concurrentUsers": 5,
   "zosmfProfiles": ["zzow01-zowep"],
-  "dsnSecondSegment": "ZZTOP"
+  "dsnSecondSegment": "ZZTOP",
+  "unixDir": "/zaas1/zowep/zztop"
 }

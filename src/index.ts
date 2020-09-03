@@ -1,9 +1,16 @@
 import {Command, flags} from '@oclif/command'
-import {existsSync, readFileSync, promises} from 'fs'
+import {existsSync, promises, readFileSync, unlinkSync} from 'fs'
 import {join, resolve} from 'path'
 import * as tmp from 'tmp'
-import {AbstractSession, CliProfileManager, Imperative, ImperativeConfig, IProfileLoaded} from '@zowe/imperative'
-import {Create, CreateDataSetTypeEnum, List, ZosmfSession, Upload, sleep} from '@zowe/cli'
+import {
+  AbstractSession,
+  CliProfileManager,
+  Imperative,
+  ImperativeConfig,
+  IProfileLoaded,
+  Session
+} from '@zowe/imperative'
+import {Create, CreateDataSetTypeEnum, Download, List, sleep, Upload, ZosmfSession} from '@zowe/cli'
 import {PerfTiming} from '@zowe/perf-timing'
 import parse from 'parse-duration'
 
@@ -68,42 +75,65 @@ class Zztop extends Command {
       return {failedRequests: 0, successfulRequests: 0}
     }
 
+    const driver = this;
     const userid = profile.profile.user
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
 
-    const tmpCobolPath = tmp.tmpNameSync()
-    const lineCount = filesizeParser(testDefinition.memberSize) / 80
-    const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
-    await promises.writeFile(tmpCobolPath, result)
-    const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + `.U${userNumber}`
-    this.log(testDsn)
-    const exists = await datasetExists(session, testDsn)
-    if (!exists) {
-      const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
-      if (!response.success) {
-        this.error(response.commandResponse, {exit: 2})
-      }
-    }
+    const {tmpCobolPath, testDsn} = await this.prepareTestData(testDefinition, userid, userNumber, session);
+
+    const tests = [
+      // zowe files upload ftds
+      {
+        name: "DatasetUpload", action: async function () {
+          const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
+          driver.log(JSON.stringify(uploadResponse))
+          return uploadResponse.success;
+        },
+      },
+      // zowe files download ds
+      {
+        name: "DatasetDownload", action: async function () {
+          const tmpDownloadPath = tmp.tmpNameSync()
+          const uploadResponse = await Download.dataSet(session, testDsn + '(TEST1)', {file: tmpDownloadPath})
+          driver.log(JSON.stringify(uploadResponse))
+          unlinkSync(tmpDownloadPath)
+          return uploadResponse.success;
+        },
+      },
+      // TODO:
+      // zowe files upload ftu
+      // zowe files download uf
+      // zowe tso issue command
+      // zowe console issue command
+      // zowe console collect sr
+      // zowe jobs submit
+      // zowe jobs view
+      // zowe jobs download
+    ]
 
     let successfulRequests = 0
     let failedRequests = 0
     const startTime = new Date().getTime()
     while (new Date().getTime() - startTime <= duration) {
       const scriptStartTime = new Date().getTime()
-      const commandStartTime = new Date().getTime()
-      PerfTiming.api.mark('BeforeDatasetUpload')
-      const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)') // eslint-disable-line no-await-in-loop
-      PerfTiming.api.mark('AfterDatasetUpload')
-      PerfTiming.api.measure('DatasetUpload', 'BeforeDatasetUpload', 'AfterDatasetUpload')
-      this.log(JSON.stringify(uploadResponse))
-      if (uploadResponse.success) {
-        successfulRequests++
-      } else {
-        failedRequests++
+
+      for (const test of tests) {
+        const commandStartTime = new Date().getTime()
+        PerfTiming.api.mark('Before' + test.name)
+        const success = await test.action();
+        PerfTiming.api.mark('After' + test.name)
+        if (success) {
+          PerfTiming.api.measure(test.name, 'Before' + test.name, 'After' + test.name)
+          successfulRequests++
+        } else {
+          PerfTiming.api.measure(test.name + "Failed", 'Before' + test.name, 'After' + test.name)
+          failedRequests++
+        }
+
+        await sleep(Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)) // eslint-disable-line no-await-in-loop
       }
 
-      await sleep(Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)) // eslint-disable-line no-await-in-loop
       await sleep(Math.max(scriptDelay - (new Date().getTime() - scriptStartTime), 0)) // eslint-disable-line no-await-in-loop
     }
 
@@ -156,12 +186,35 @@ class Zztop extends Command {
     }
 
     await sleep(1000)
+    const testNames = ["DatasetUpload", "DatasetDownload"];
     for (const measurement of PerfTiming.api.getMetrics().measurements) {
-      if (measurement.name === 'DatasetUpload') {
-        this.log(`Average DatasetUpload: ${measurement.averageDuration} ms`)
+      for (const testName of testNames) {
+        if (measurement.name === testName) {
+          this.log(`Average successful ${testName}: ${measurement.averageDuration} ms`)
+        }
+        if (measurement.name === testName + "Failed") {
+          this.log(`Average failed ${testName}: ${measurement.averageDuration} ms`)
+        }
       }
     }
     this.log('Total activity count', JSON.stringify(totalActivityStats))
+  }
+
+  private async prepareTestData(testDefinition: TestDefinition, userid: string, userNumber: number, session: Session) {
+    const tmpCobolPath = tmp.tmpNameSync()
+    const lineCount = filesizeParser(testDefinition.memberSize) / 80
+    const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
+    await promises.writeFile(tmpCobolPath, result)
+    const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + `.U${userNumber}`
+    this.log(testDsn)
+    const exists = await datasetExists(session, testDsn)
+    if (!exists) {
+      const response = await Create.dataSet(session, CreateDataSetTypeEnum.DATA_SET_CLASSIC, testDsn)
+      if (!response.success) {
+        this.error(response.commandResponse, {exit: 2})
+      }
+    }
+    return {tmpCobolPath, testDsn};
   }
 }
 
