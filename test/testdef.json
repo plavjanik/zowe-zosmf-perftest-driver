@@ -1,0 +1,14 @@
+{
+  "name": "basic",
+  "fileSize": "10k",
+  "memberSize": "10k",
+  "jobOutputSize": "10k",
+  "tsoCommandOutputSize": "1k",
+  "duration": "15s",
+  "commandDelay": "1s",
+  "scriptDelay": "2s",
+  "concurrentUsers": 5,
+  "zosmfProfiles": ["zzow01-zowep"],
+  "dsnSecondSegment": "ZZTOP",
+  "unixDir": "/zaas1/zowep/zztop"
+}

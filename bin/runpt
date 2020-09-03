@@ -1,0 +1,13 @@
+#!/usr/bin/env -S PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. node
+
+const fs = require('fs')
+const path = require('path')
+const project = path.join(__dirname, '../tsconfig.json')
+const dev = fs.existsSync(project)
+
+if (dev) {
+  require('ts-node').register({project})
+}
+
+require(`../${dev ? 'src' : 'lib'}`).run()
+.catch(require('@oclif/errors/handle'))

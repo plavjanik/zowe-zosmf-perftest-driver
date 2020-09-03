@@ -1,4 +1,4 @@
-import {expect, test} from '@oclif/test'
+import {test} from '@oclif/test'
 
 import cmd = require('../src')
 
@@ -6,14 +6,12 @@ describe('zztop', () => {
   test
   .stdout()
   .do(() => cmd.run([]))
-  .it('runs hello', ctx => {
-    expect(ctx.stdout).to.contain('hello world')
-  })
+  .exit(2)
+  .it('fails without arguments')
 
   test
   .stdout()
-  .do(() => cmd.run(['--name', 'jeff']))
-  .it('runs hello --name jeff', ctx => {
-    expect(ctx.stdout).to.contain('hello jeff')
-  })
+  .do(() => cmd.run(['test/bad.json']))
+  .exit(2)
+  .it('fails with missing test def file')
 })
