@@ -75,7 +75,7 @@ class Zztop extends Command {
       return {failedRequests: 0, successfulRequests: 0}
     }
 
-    const driver = this // eslint-disable-line @typescript-eslint/no-this-alias
+    const driver = this // eslint-disable-line no-this-alias
     const userid = profile.profile.user
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
@@ -101,7 +101,7 @@ class Zztop extends Command {
           return uploadResponse.success
         },
       },
-      // TODO:
+      // TODO: // eslint-disable-line no-warning-comments
       // zowe files upload ftu
       // zowe files download uf
       // zowe tso issue command
