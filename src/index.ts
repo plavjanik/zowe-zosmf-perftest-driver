@@ -101,7 +101,7 @@ class Zztop extends Command {
           return uploadResponse.success
         },
       },
-      // TODO: // eslint-disable-line no-warning-comments
+      // TODO:
       // zowe files upload ftu
       // zowe files download uf
       // zowe tso issue command
