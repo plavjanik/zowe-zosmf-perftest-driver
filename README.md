@@ -19,17 +19,23 @@ Zowe z/OSMF Test of Performance
 
 ## Usage
 
-1. Install package:
+1. Install package from NPM:
 
-    ```bash
-    npm i zztop.tgz
-    ```
+   ```bash
+   npm i @zowedev/zztop
+   ```
+   
+   Or you can clone this repository and run `npm install` in it.
 
-2. Create Zowe profiles:
+2. Create Zowe profiles for each user ID that will be used for testing:
 
-    ```bash
-    npx zowe profiles create zosmf-profile zzow01-zowep --host zzow01.zowe.marist.cloud --port 10443 --user userid --pass "passwd" --reject-unauthorized false --overwrite
-    ```
+   Example:
+
+   ```bash
+   npx zowe profiles create zosmf-profile zzow01-zowep --host zzow01.zowe.marist.cloud --port 10443 --user userid --pass "passwd" --reject-unauthorized false --overwrite
+   ```
+   
+   Set the host and port to the values of the tested z/OSMF instance.
 
 3. Create test definition file `test.json`:
 
@@ -45,12 +51,16 @@ Zowe z/OSMF Test of Performance
       "scriptDelay": "1s",
       "concurrentUsers": 5,
       "zosmfProfiles": ["zzow01-zowep"],
-      "dsnSecondSegment": "ZZTOP"
+      "dsnSecondSegment": "ZZTOP",
+      "unixDir": "/zaas1/zowep/zztop"
     }
     ```
+   
+   Use same profile names as in the step #2. Their number can be lower than the number of concurrent users.
+   Provide valid values for `dsnSecondSegment` and `unixDir`.
 
 4. Run it:
 
     ```bash
-    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test/testdef.json
+    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test.json
     ```
