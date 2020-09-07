@@ -62,5 +62,5 @@ Zowe z/OSMF Test of Performance
 4. Run it:
 
     ```bash
-    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test.json
+    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx @zowedev/zztop test.json
     ```
