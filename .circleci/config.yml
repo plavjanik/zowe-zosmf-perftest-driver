@@ -22,18 +22,21 @@ jobs:
       - run:
           name: Testing
           command: npm test
-#      - run:
-#          name: Sample Perf Testing
-#          command: npm run perftest
       - run:
-          filters:
-            tags:
-              only: /v.*/
-            branches:
-              ignore: /.*/
+          name: Sample Perf Testing
+          command: npm run perftest
+  publish:
+    docker:
+      - image: node:12
+    working_directory: ~/cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - run:
           name: Publishing zztop Tool to npmjs.com
           command: |
-            npm install
             npm version `git describe --tags --abbrev=0 | cut -c2-`
             npm pack
             echo "//registry.npmjs.org/:_authToken=$NPMJS_TOKEN" > ~/.npmrc
@@ -57,6 +60,14 @@ workflows:
   "zztop":
     jobs:
       - node-12
+      - publish:
+          requires:
+            - node-12
+          filters:
+            tags:
+              only: /v.*/
+            branches:
+              ignore: /.*/
       - cache:
           filters:
             tags:
