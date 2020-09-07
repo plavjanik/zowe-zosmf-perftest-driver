@@ -13,11 +13,15 @@ import {
 import {
   Create,
   CreateDataSetTypeEnum,
+  DeleteJobs,
   Download,
+  GetJobs,
   IssueCommand,
   IssueTso,
   List,
+  MonitorJobs,
   sleep,
+  SubmitJobs,
   Upload,
   ZosmfSession
 } from '@zowe/cli'
@@ -42,7 +46,6 @@ interface TestDefinition {
   fileSize: string;
   memberSize: string;
   jobOutputSize: string;
-  tsoCommandOutputSize: string;
   duration: string;
   commandDelay: string;
   scriptDelay: string;
@@ -50,7 +53,8 @@ interface TestDefinition {
   zosmfProfiles: string[];
   dsnSecondSegment: string;
   unixDir: string;
-  accountCode: string
+  accountCode: string;
+  jobCard: string[];
 }
 
 interface ActivityStats {
@@ -102,7 +106,9 @@ class Zztop extends Command {
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
 
-    const {tmpCobolPath, testDsn} = await this.prepareTestData(testDefinition, userid, userNumber, session)
+    const {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl} = await this.prepareTestData(testDefinition, userid, userNumber, session)
+
+    this.log(`Running tests for ${userNumber} - ${userid}`)
 
     const tests = [
       // zowe files upload ftds
@@ -149,10 +155,33 @@ class Zztop extends Command {
         },
       },
       // TODO:
-      // zowe console collect sr
+      // zowe console collect sr [JA]
       // zowe jobs submit [PP]
+      {
+        name: 'JobSubmit', action: async function () {
+          const job = await SubmitJobs.submitJcl(session, testJcl)
+          const cleanup = async function () {
+            await MonitorJobs.waitForOutputStatus(session, job.jobname, job.jobid)
+            await DeleteJobs.deleteJob(session, job.jobname, job.jobid)
+          }
+          const promise = cleanup()
+          return { success: true, job: job, cleanupPromise: promise}
+        }
+      },
       // zowe jobs view [PP]
+      {
+        name: 'JobView', action: async function () {
+          const spoolFiles = await GetJobs.getSpoolFiles(session, testJobname, testJobid)
+          return { success: spoolFiles.length > 0, spoolFiles: spoolFiles}
+        }
+      },
       // zowe jobs download [PP]
+      {
+        name: 'JobDownload', action: async function () {
+          const spoolContent = await GetJobs.getSpoolContentById(session, testJobname, testJobid, testSpoolId)
+          return { success: spoolContent.length > 0, content: spoolContent}
+        }
+      }
     ]
 
     let successfulRequests = 0
@@ -160,30 +189,37 @@ class Zztop extends Command {
     const startTime = new Date().getTime()
     let requestNumber = 0
     while (new Date().getTime() - startTime <= duration) {
-      requestNumber++
       const scriptStartTime = new Date().getTime()
+      PerfTiming.api.mark('BeforeScript' + userNumber)
 
       for (const test of tests) {
+        requestNumber++
         const commandStartTime = new Date().getTime()
-        PerfTiming.api.mark('Before' + test.name)
+        PerfTiming.api.mark('Before' + test.name + userNumber)
         const response = await test.action() // eslint-disable-line no-await-in-loop
-        PerfTiming.api.mark('After' + test.name)
+        PerfTiming.api.mark('After' + test.name  + userNumber)
         const responseString = JSON.stringify(response)
         if (response.success) {
-          PerfTiming.api.measure(test.name, 'Before' + test.name, 'After' + test.name)
+          PerfTiming.api.measure(test.name, 'Before' + test.name + userNumber, 'After' + test.name + userNumber)
           successfulRequests++
           logger.info(`User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`)
         } else {
-          PerfTiming.api.measure(test.name + 'Failed', 'Before' + test.name, 'After' + test.name)
+          PerfTiming.api.measure(test.name + 'Failed', 'Before' + test.name + userNumber, 'After' + test.name + userNumber)
           failedRequests++
           logger.error(`User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`)
         }
 
         await sleep(Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)) // eslint-disable-line no-await-in-loop
       }
+      PerfTiming.api.mark('AfterScript' + userNumber)
+      PerfTiming.api.measure('Script', 'BeforeScript' + userNumber, 'AfterScript' + userNumber)
 
       await sleep(Math.max(scriptDelay - (new Date().getTime() - scriptStartTime), 0)) // eslint-disable-line no-await-in-loop
     }
+
+    this.log(`Finished tests for ${userNumber} - ${userid}`)
+
+    await DeleteJobs.deleteJob(session, testJobname, testJobid)
 
     return {failedRequests: failedRequests, successfulRequests: successfulRequests}
   }
@@ -234,7 +270,7 @@ class Zztop extends Command {
     }
 
     await sleep(1000)
-    const testNames = ['DatasetUpload', 'DatasetDownload', 'FileUpload', 'FileDownload', 'TsoCommand', 'ConsoleCommand']
+    const testNames = ['DatasetUpload', 'DatasetDownload', 'FileUpload', 'FileDownload', 'TsoCommand', 'ConsoleCommand', 'JobSubmit', 'JobView', 'JobDownload', 'Script']
     for (const measurement of PerfTiming.api.getMetrics().measurements) {
       for (const testName of testNames) {
         if (measurement.name === testName) {
@@ -262,7 +298,33 @@ class Zztop extends Command {
         this.error(response.commandResponse, {exit: 2})
       }
     }
-    return {tmpCobolPath, testDsn}
+
+    const jobCard = testDefinition.jobCard.join("\n").replace("$jobname", `ZZT${userNumber}`)
+    const jobLines = [
+      "//RUN EXEC PGM=IEBGENER",
+      "//SYSPRINT DD SYSOUT=*",
+      "//SYSIN DD DUMMY",
+      "//SYSUT2 DD SYSOUT=*",
+      "//SYSUT1 DD *",
+    ]
+    const sysut1LineCount = filesizeParser(testDefinition.jobOutputSize) / 80
+    const testJcl = jobCard + "\n" + jobLines.join("\n") + "\n" + " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(sysut1LineCount)
+    const job = await SubmitJobs.submitJclNotifyCommon(session, { jcl: testJcl})
+    if (job.retcode !== "CC 0000") {
+      this.error(JSON.stringify(job), {exit: 2})
+    }
+    const testJobid = job.jobid
+    const testJobname = job.jobname
+
+    const jobFiles = await GetJobs.getSpoolFiles(session, testJobname, testJobid)
+    let testSpoolId = 0
+    for (const jobFile of jobFiles) {
+      if (jobFile.ddname === "SYSUT2") {
+        testSpoolId = jobFile.id
+      }
+    }
+    this.log("Prepared test data", userNumber, "-", tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId)
+    return {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl}
   }
 }
 
