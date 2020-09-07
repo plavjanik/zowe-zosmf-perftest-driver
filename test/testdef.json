@@ -10,5 +10,6 @@
   "concurrentUsers": 5,
   "zosmfProfiles": ["zzow01-zowep"],
   "dsnSecondSegment": "ZZTOP",
-  "unixDir": "/zaas1/zowep/zztop"
+  "unixDir": "/zaas1/zowep/zztop",
+  "accountCode": "00000000"
 }

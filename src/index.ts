@@ -3,14 +3,24 @@ import {existsSync, promises, readFileSync, unlinkSync} from 'fs'
 import {join, resolve} from 'path'
 import * as tmp from 'tmp'
 import {
-  AbstractSession,
-  CliProfileManager,
-  Imperative,
-  ImperativeConfig,
-  IProfileLoaded,
-  Session,
+    AbstractSession,
+    CliProfileManager,
+    Imperative,
+    ImperativeConfig,
+    IProfileLoaded,
+    Session,
 } from '@zowe/imperative'
-import {Create, CreateDataSetTypeEnum, Download, List, sleep, Upload, ZosmfSession} from '@zowe/cli'
+import {
+  Create,
+  CreateDataSetTypeEnum,
+  Download,
+  IssueCommand,
+  IssueTso,
+  List,
+  sleep,
+  Upload,
+  ZosmfSession
+} from '@zowe/cli'
 import {PerfTiming} from '@zowe/perf-timing'
 import parse from 'parse-duration'
 
@@ -39,6 +49,8 @@ interface TestDefinition {
   concurrentUsers: number;
   zosmfProfiles: string[];
   dsnSecondSegment: string;
+  unixDir: string;
+  accountCode: string
 }
 
 interface ActivityStats {
@@ -109,11 +121,34 @@ class Zztop extends Command {
           return response
         },
       },
-      // TODO:
-      // zowe files upload ftu [JA]
-      // zowe files download uf [JA]
-      // zowe tso issue command [JA]
+      // zowe files upload ftu
+      {
+        name: 'FileUpload', action: async function () {
+          return await Upload.fileToUssFile(session, tmpCobolPath, testDefinition.unixDir + `/test.txt`)
+        },
+      },
+      // zowe files download uf
+      {
+        name: 'FileDownload', action: async function () {
+          const tmpDownloadPath = tmp.tmpNameSync()
+          const response = await Download.ussFile(session, testDefinition.unixDir + `/test.txt`, {file: tmpDownloadPath})
+          unlinkSync(tmpDownloadPath)
+          return response
+        },
+      },
+      // zowe tso issue command
+      {
+        name: 'TsoCommand', action: async function () {
+          return await IssueTso.issueTsoCommand(session, testDefinition.accountCode, "SEND 'Hello' USER(" + userid +")")
+        },
+      },
       // zowe console issue command
+      {
+        name: 'ConsoleCommand', action: async function () {
+          return await IssueCommand.issue(session,{command: "D IPLINFO"})
+        },
+      },
+      // TODO:
       // zowe console collect sr
       // zowe jobs submit [PP]
       // zowe jobs view [PP]
@@ -199,7 +234,7 @@ class Zztop extends Command {
     }
 
     await sleep(1000)
-    const testNames = ['DatasetUpload', 'DatasetDownload']
+    const testNames = ['DatasetUpload', 'DatasetDownload', 'FileUpload', 'FileDownload', 'TsoCommand', 'ConsoleCommand']
     for (const measurement of PerfTiming.api.getMetrics().measurements) {
       for (const testName of testNames) {
         if (measurement.name === testName) {
