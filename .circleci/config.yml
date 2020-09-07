@@ -32,6 +32,15 @@ jobs:
       - run:
           name: Install dependencies
           command: npm ci
+      - run:
+          name: Publishing zztop Tool to npmjs.com
+          command: |
+            git config --global user.email "plavjanik@gmail.com"
+            git config --global user.name "Petr Plavjanik"
+            npm version --no-git-tag-version `git describe --tags --abbrev=0 | cut -c2-`
+            npm pack
+            echo "//registry.npmjs.org/:_authToken=$NPMJS_TOKEN" > ~/.npmrc
+            npm publish --access public
       - save_cache:
           key: v1-npm-{{checksum ".circleci/config.yml"}}-{{checksum "package-lock.json"}}
           paths:

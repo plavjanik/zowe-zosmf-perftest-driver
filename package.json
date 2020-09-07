@@ -1,5 +1,5 @@
 {
-  "name": "zztop",
+  "name": "@zowedev/zztop",
   "description": "Zowe z/OSMF Test of Performance",
   "version": "0.0.0",
   "author": "Petr Plavjanik @plavjanik",
@@ -59,8 +59,7 @@
     "eslint": "eslint . --ext .ts --config .eslintrc",
     "prepack": "rm -rf lib && tsc -b && oclif-dev readme",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
-    "perftest": "cross-env PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. ./bin/run test/testdef.json",
-    "version": "oclif-dev readme && git add README.md"
+    "perftest": "cross-env PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. ./bin/run test/testdef.json"
   },
   "types": "lib/index.d.ts"
 }
