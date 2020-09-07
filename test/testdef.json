@@ -3,13 +3,19 @@
   "fileSize": "10k",
   "memberSize": "10k",
   "jobOutputSize": "10k",
-  "tsoCommandOutputSize": "1k",
-  "duration": "15s",
-  "commandDelay": "1s",
-  "scriptDelay": "2s",
-  "concurrentUsers": 5,
-  "zosmfProfiles": ["zzow01-zowep"],
+  "duration": "60s",
+  "commandDelay": "2s",
+  "scriptDelay": "15s",
+  "concurrentUsers": 4,
+  "zosmfProfiles": [
+    "zzow01-zowep"
+  ],
   "dsnSecondSegment": "ZZTOP",
   "unixDir": "/zaas1/zowep/zztop",
-  "accountCode": "00000000"
+  "accountCode": "00000000",
+  "jobCard": [
+    "//$jobname JOB 000000000,'ZZTOP',MSGCLASS=A,CLASS=A,",
+    "//  MSGLEVEL=(1,1),REGION=0M",
+    "/*JOBPARM SYSAFF=*"
+  ]
 }

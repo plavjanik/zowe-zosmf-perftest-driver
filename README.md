@@ -51,7 +51,13 @@ Zowe z/OSMF Test of Performance
       "concurrentUsers": 10,
       "zosmfProfiles": ["zzow01-zowep"],
       "dsnSecondSegment": "ZZTOP",
-      "unixDir": "/zaas1/zowep/zztop"
+      "unixDir": "/zaas1/zowep/zztop",
+      "accountCode": "00000000",
+      "jobCard": [
+        "//$jobname JOB 000000000,'ZZTOP',MSGCLASS=A,CLASS=A,",
+        "//  MSGLEVEL=(1,1),REGION=0M",
+        "/*JOBPARM SYSAFF=*"
+      ]   
     }
     ```
    
