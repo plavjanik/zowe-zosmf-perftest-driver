@@ -4,7 +4,7 @@ zztop
 Zowe z/OSMF Test of Performance
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/zztop.svg)](https://npmjs.org/package/zztop)
+[![Version](https://img.shields.io/npm/v/@zowedev/zztop.svg)](https://npmjs.org/package/@zowedev/zztop)
 [![CircleCI](https://circleci.com/gh/plavjanik/zowe-zosmf-perftest-driver/tree/master.svg?style=shield)](https://circleci.com/gh/plavjanik/zowe-zosmf-perftest-driver/tree/master)
 [![Downloads/week](https://img.shields.io/npm/dw/zztop.svg)](https://npmjs.org/package/zztop)
 [![License](https://img.shields.io/npm/l/zztop.svg)](https://github.com/plavjanik/zowe-zosmf-perftest-driver/blob/master/package.json)
