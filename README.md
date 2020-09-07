@@ -64,3 +64,5 @@ Zowe z/OSMF Test of Performance
     ```bash
     PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx zztop test.json
     ```
+   
+5. Capture `requests.log`, `requests-error.log`, `metrics.1.json`, and the output of the command.   

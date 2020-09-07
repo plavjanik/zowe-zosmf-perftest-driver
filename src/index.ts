@@ -15,6 +15,17 @@ import {PerfTiming} from '@zowe/perf-timing'
 import parse from 'parse-duration'
 
 const filesizeParser = require('filesize-parser')
+const winston = require('winston')
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    new winston.transports.File({ filename: 'requests-error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'requests.log' }),
+  ],
+})
 
 interface TestDefinition {
   name: string;
@@ -112,22 +123,25 @@ class Zztop extends Command {
     let successfulRequests = 0
     let failedRequests = 0
     const startTime = new Date().getTime()
+    let requestNumber = 0
     while (new Date().getTime() - startTime <= duration) {
+      requestNumber++
       const scriptStartTime = new Date().getTime()
 
       for (const test of tests) {
         const commandStartTime = new Date().getTime()
         PerfTiming.api.mark('Before' + test.name)
         const response = await test.action() // eslint-disable-line no-await-in-loop
-        const responseString = JSON.stringify(response)
-        this.log(responseString)
         PerfTiming.api.mark('After' + test.name)
+        const responseString = JSON.stringify(response)
         if (response.success) {
           PerfTiming.api.measure(test.name, 'Before' + test.name, 'After' + test.name)
           successfulRequests++
+          logger.info(`User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`)
         } else {
           PerfTiming.api.measure(test.name + 'Failed', 'Before' + test.name, 'After' + test.name)
           failedRequests++
+          logger.error(`User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`)
         }
 
         await sleep(Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)) // eslint-disable-line no-await-in-loop
