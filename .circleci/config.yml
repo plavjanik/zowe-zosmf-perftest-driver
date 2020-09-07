@@ -22,9 +22,22 @@ jobs:
       - run:
           name: Testing
           command: npm test
+#      - run:
+#          name: Sample Perf Testing
+#          command: npm run perftest
       - run:
-          name: Sample Perf Testing
-          command: npm run perftest
+          filters:
+            tags:
+              only: /v.*/
+            branches:
+              ignore: /.*/
+          name: Publishing zztop Tool to npmjs.com
+          command: |
+            npm install
+            npm version `git describe --tags --abbrev=0 | cut -c2-`
+            npm pack
+            echo "//registry.npmjs.org/:_authToken=$NPMJS_TOKEN" > ~/.npmrc
+            npm publish --access public
   cache:
     <<: *test
     steps:
