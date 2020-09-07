@@ -52,7 +52,7 @@ async function datasetExists(session: AbstractSession, dsn: string): Promise<boo
 }
 
 class Zztop extends Command {
-  static description = 'describe the command here'
+  static description = 'Zowe z/OSMF Test of Performance'
 
   static flags = {
     // add --version flag to show CLI version
@@ -75,7 +75,6 @@ class Zztop extends Command {
       return {failedRequests: 0, successfulRequests: 0}
     }
 
-    const driver = this // eslint-disable-line no-this-alias
     const userid = profile.profile.user
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
@@ -86,30 +85,28 @@ class Zztop extends Command {
       // zowe files upload ftds
       {
         name: 'DatasetUpload', action: async function () {
-          const uploadResponse = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
-          driver.log(JSON.stringify(uploadResponse))
-          return uploadResponse.success
+          const response = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
+          return response
         },
       },
       // zowe files download ds
       {
         name: 'DatasetDownload', action: async function () {
           const tmpDownloadPath = tmp.tmpNameSync()
-          const uploadResponse = await Download.dataSet(session, testDsn + '(TEST1)', {file: tmpDownloadPath})
-          driver.log(JSON.stringify(uploadResponse))
+          const response = await Download.dataSet(session, testDsn + '(TEST1)', {file: tmpDownloadPath})
           unlinkSync(tmpDownloadPath)
-          return uploadResponse.success
+          return response
         },
       },
       // TODO:
-      // zowe files upload ftu
-      // zowe files download uf
-      // zowe tso issue command
+      // zowe files upload ftu [JA]
+      // zowe files download uf [JA]
+      // zowe tso issue command [JA]
       // zowe console issue command
       // zowe console collect sr
-      // zowe jobs submit
-      // zowe jobs view
-      // zowe jobs download
+      // zowe jobs submit [PP]
+      // zowe jobs view [PP]
+      // zowe jobs download [PP]
     ]
 
     let successfulRequests = 0
@@ -121,9 +118,11 @@ class Zztop extends Command {
       for (const test of tests) {
         const commandStartTime = new Date().getTime()
         PerfTiming.api.mark('Before' + test.name)
-        const success = await test.action() // eslint-disable-line no-await-in-loop
+        const response = await test.action() // eslint-disable-line no-await-in-loop
+        const responseString = JSON.stringify(response)
+        this.log(responseString)
         PerfTiming.api.mark('After' + test.name)
-        if (success) {
+        if (response.success) {
           PerfTiming.api.measure(test.name, 'Before' + test.name, 'After' + test.name)
           successfulRequests++
         } else {
