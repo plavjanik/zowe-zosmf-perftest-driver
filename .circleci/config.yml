@@ -37,7 +37,7 @@ jobs:
           command: |
             git config --global user.email "plavjanik@gmail.com"
             git config --global user.name "Petr Plavjanik"
-            npm version from-git
+            npm version --no-git-tag-version `git describe --tags --abbrev=0 | cut -c2-`
             npm pack
             echo "//registry.npmjs.org/:_authToken=$NPMJS_TOKEN" > ~/.npmrc
             npm publish --access public
