@@ -285,10 +285,22 @@ class Zztop extends Command {
   }
 
   private async prepareTestData(testDefinition: TestDefinition, userid: string, userNumber: number, session: Session) {
+    const tmpCobolPath = await this.prepareTestFile(testDefinition);
+    const testDsn = await this.prepareTestDataset(userid, testDefinition, userNumber, session);
+    let {testJcl, testJobid, testJobname, testSpoolId} = await this.prepareTestJob(testDefinition, userNumber, session);
+    this.log("Prepared test data", userNumber, "-", tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId)
+    return {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl}
+  }
+
+  private async prepareTestFile(testDefinition: TestDefinition) {
     const tmpCobolPath = tmp.tmpNameSync()
     const lineCount = filesizeParser(testDefinition.memberSize) / 80
     const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
     await promises.writeFile(tmpCobolPath, result)
+    return tmpCobolPath;
+  }
+
+  private async prepareTestDataset(userid: string, testDefinition: TestDefinition, userNumber: number, session: Session) {
     const testDsn = userid.toUpperCase() + '.' + testDefinition.dsnSecondSegment + `.U${userNumber}`
     this.log(testDsn)
     const exists = await datasetExists(session, testDsn)
@@ -298,7 +310,10 @@ class Zztop extends Command {
         this.error(response.commandResponse, {exit: 2})
       }
     }
+    return testDsn;
+  }
 
+  private async prepareTestJob(testDefinition: TestDefinition, userNumber: number, session: Session) {
     const jobCard = testDefinition.jobCard.join("\n").replace("$jobname", `ZZT${userNumber}`)
     const jobLines = [
       "//RUN EXEC PGM=IEBGENER",
@@ -309,7 +324,7 @@ class Zztop extends Command {
     ]
     const sysut1LineCount = filesizeParser(testDefinition.jobOutputSize) / 80
     const testJcl = jobCard + "\n" + jobLines.join("\n") + "\n" + " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(sysut1LineCount)
-    const job = await SubmitJobs.submitJclNotifyCommon(session, { jcl: testJcl})
+    const job = await SubmitJobs.submitJclNotifyCommon(session, {jcl: testJcl})
     if (job.retcode !== "CC 0000") {
       this.error(JSON.stringify(job), {exit: 2})
     }
@@ -323,8 +338,7 @@ class Zztop extends Command {
         testSpoolId = jobFile.id
       }
     }
-    this.log("Prepared test data", userNumber, "-", tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId)
-    return {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl}
+    return {testJcl, testJobid, testJobname, testSpoolId};
   }
 }
 
