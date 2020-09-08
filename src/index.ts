@@ -3,16 +3,16 @@ import {existsSync, promises, readFileSync, unlinkSync} from 'fs'
 import {join, resolve} from 'path'
 import * as tmp from 'tmp'
 import {
-    AbstractSession,
-    CliProfileManager,
-    Imperative,
-    ImperativeConfig,
-    IProfileLoaded,
-    Session,
+  AbstractSession,
+  CliProfileManager,
+  Imperative,
+  ImperativeConfig,
+  IProfileLoaded,
+  Session,
 } from '@zowe/imperative'
 import {
   Create,
-  CreateDataSetTypeEnum,
+  CreateDataSetTypeEnum, Delete,
   DeleteJobs,
   Download,
   GetJobs,
@@ -23,7 +23,7 @@ import {
   sleep,
   SubmitJobs,
   Upload,
-  ZosmfSession
+  ZosmfSession,
 } from '@zowe/cli'
 import {PerfTiming} from '@zowe/perf-timing'
 import parse from 'parse-duration'
@@ -34,10 +34,10 @@ const winston = require('winston')
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.json(),
-  defaultMeta: { service: 'user-service' },
+  defaultMeta: {service: 'user-service'},
   transports: [
-    new winston.transports.File({ filename: 'requests-error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'requests.log' }),
+    new winston.transports.File({filename: 'requests-error.log', level: 'error'}),
+    new winston.transports.File({filename: 'requests.log'}),
   ],
 })
 
@@ -106,7 +106,7 @@ class Zztop extends Command {
     this.log(`Userid #${userNumber}: ${userid}`)
     const session = ZosmfSession.createBasicZosmfSession(profile.profile)
 
-    const {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl} = await this.prepareTestData(testDefinition, userid, userNumber, session)
+    const {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl, testUploadUssPath} = await this.prepareTestData(testDefinition, userid, userNumber, session)
 
     this.log(`Running tests for ${userNumber} - ${userid}`)
 
@@ -130,7 +130,7 @@ class Zztop extends Command {
       // zowe files upload ftu
       {
         name: 'FileUpload', action: async function () {
-          return await Upload.fileToUssFile(session, tmpCobolPath, `${testDefinition.unixDir}/test${userNumber}.txt`)
+          return Upload.fileToUssFile(session, tmpCobolPath, testUploadUssPath)
         },
       },
       // zowe files download uf
@@ -145,17 +145,15 @@ class Zztop extends Command {
       // zowe tso issue command
       {
         name: 'TsoCommand', action: async function () {
-          return await IssueTso.issueTsoCommand(session, testDefinition.accountCode, `SEND 'Hello' USER(${userid})`)
+          return IssueTso.issueTsoCommand(session, testDefinition.accountCode, `SEND 'Hello' USER(${userid})`)
         },
       },
       // zowe console issue command
       {
         name: 'ConsoleCommand', action: async function () {
-          return await IssueCommand.issue(session,{command: 'D IPLINFO'})
+          return IssueCommand.issue(session, {command: 'D IPLINFO'})
         },
       },
-      // TODO:
-      // zowe console collect sr [JA]
       // zowe jobs submit [PP]
       {
         name: 'JobSubmit', action: async function () {
@@ -165,23 +163,23 @@ class Zztop extends Command {
             await DeleteJobs.deleteJob(session, job.jobname, job.jobid)
           }
           const promise = cleanup()
-          return { success: true, job: job, cleanupPromise: promise}
-        }
+          return {success: true, job: job, cleanupPromise: promise}
+        },
       },
       // zowe jobs view [PP]
       {
         name: 'JobView', action: async function () {
           const spoolFiles = await GetJobs.getSpoolFiles(session, testJobname, testJobid)
-          return { success: spoolFiles.length > 0, spoolFiles: spoolFiles}
-        }
+          return {success: spoolFiles.length > 0, spoolFiles: spoolFiles}
+        },
       },
       // zowe jobs download [PP]
       {
         name: 'JobDownload', action: async function () {
           const spoolContent = await GetJobs.getSpoolContentById(session, testJobname, testJobid, testSpoolId)
-          return { success: spoolContent.length > 0, content: spoolContent}
-        }
-      }
+          return {success: spoolContent.length > 0, content: spoolContent}
+        },
+      },
     ]
 
     let successfulRequests = 0
@@ -218,10 +216,17 @@ class Zztop extends Command {
     }
 
     this.log(`Finished tests for ${userNumber} - ${userid}`)
-
-    await DeleteJobs.deleteJob(session, testJobname, testJobid)
+    await this.cleanupTestData(session, userNumber, testJobname, testJobid, testDsn, testUploadUssPath, tmpCobolPath)
 
     return {failedRequests: failedRequests, successfulRequests: successfulRequests}
+  }
+
+  private async cleanupTestData(session: Session, userNumber: number, testJobname: string, testJobid: string, testDsn: string, testUploadUssPath: string, tmpCobolPath: string) {
+    this.log(`Cleaning up test data for user #${userNumber}`)
+    await DeleteJobs.deleteJob(session, testJobname, testJobid)
+    await Delete.dataSet(session, testDsn)
+    await Delete.ussFile(session, testUploadUssPath)
+    unlinkSync(tmpCobolPath)
   }
 
   async run() {
@@ -285,11 +290,12 @@ class Zztop extends Command {
   }
 
   private async prepareTestData(testDefinition: TestDefinition, userid: string, userNumber: number, session: Session) {
-    const tmpCobolPath = await this.prepareTestFile(testDefinition);
-    const testDsn = await this.prepareTestDataset(userid, testDefinition, userNumber, session);
-    let {testJcl, testJobid, testJobname, testSpoolId} = await this.prepareTestJob(testDefinition, userNumber, session);
-    this.log("Prepared test data", userNumber, "-", tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId)
-    return {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl}
+    const tmpCobolPath = await this.prepareTestFile(testDefinition)
+    const testDsn = await this.prepareTestDataset(userid, testDefinition, userNumber, session)
+    const testUploadUssPath = `${testDefinition.unixDir}/test${userNumber}.txt`
+    const {testJcl, testJobid, testJobname, testSpoolId} = await this.prepareTestJob(testDefinition, userNumber, session)
+    this.log('Prepared test data', userNumber, '-', tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testUploadUssPath)
+    return {tmpCobolPath, testDsn, testJobname, testJobid, testSpoolId, testJcl, testUploadUssPath}
   }
 
   private async prepareTestFile(testDefinition: TestDefinition) {
@@ -297,7 +303,7 @@ class Zztop extends Command {
     const lineCount = filesizeParser(testDefinition.memberSize) / 80
     const result = " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(lineCount)
     await promises.writeFile(tmpCobolPath, result)
-    return tmpCobolPath;
+    return tmpCobolPath
   }
 
   private async prepareTestDataset(userid: string, testDefinition: TestDefinition, userNumber: number, session: Session) {
@@ -310,22 +316,22 @@ class Zztop extends Command {
         this.error(response.commandResponse, {exit: 2})
       }
     }
-    return testDsn;
+    return testDsn
   }
 
   private async prepareTestJob(testDefinition: TestDefinition, userNumber: number, session: Session) {
-    const jobCard = testDefinition.jobCard.join("\n").replace("$jobname", `ZZT${userNumber}`)
+    const jobCard = testDefinition.jobCard.join('\n').replace('$jobname', `ZZT${userNumber}`)
     const jobLines = [
-      "//RUN EXEC PGM=IEBGENER",
-      "//SYSPRINT DD SYSOUT=*",
-      "//SYSIN DD DUMMY",
-      "//SYSUT2 DD SYSOUT=*",
-      "//SYSUT1 DD *",
+      '//RUN EXEC PGM=IEBGENER',
+      '//SYSPRINT DD SYSOUT=*',
+      '//SYSIN DD DUMMY',
+      '//SYSUT2 DD SYSOUT=*',
+      '//SYSUT1 DD *',
     ]
     const sysut1LineCount = filesizeParser(testDefinition.jobOutputSize) / 80
-    const testJcl = jobCard + "\n" + jobLines.join("\n") + "\n" + " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(sysut1LineCount)
+    const testJcl = jobCard + '\n' + jobLines.join('\n') + '\n' + " 04110     DISPLAY 'HELLO, WORLD' UPON CONSL.                           00170000\n".repeat(sysut1LineCount)
     const job = await SubmitJobs.submitJclNotifyCommon(session, {jcl: testJcl})
-    if (job.retcode !== "CC 0000") {
+    if (job.retcode !== 'CC 0000') {
       this.error(JSON.stringify(job), {exit: 2})
     }
     const testJobid = job.jobid
@@ -334,11 +340,11 @@ class Zztop extends Command {
     const jobFiles = await GetJobs.getSpoolFiles(session, testJobname, testJobid)
     let testSpoolId = 0
     for (const jobFile of jobFiles) {
-      if (jobFile.ddname === "SYSUT2") {
+      if (jobFile.ddname === 'SYSUT2') {
         testSpoolId = jobFile.id
       }
     }
-    return {testJcl, testJobid, testJobname, testSpoolId};
+    return {testJcl, testJobid, testJobname, testSpoolId}
   }
 }
 
