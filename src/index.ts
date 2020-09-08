@@ -114,8 +114,7 @@ class Zztop extends Command {
       // zowe files upload ftds
       {
         name: 'DatasetUpload', action: async function () {
-          const response = await Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
-          return response
+          return Upload.fileToDataset(session, tmpCobolPath, testDsn + '(TEST1)')
         },
       },
       // zowe files download ds
@@ -145,7 +144,13 @@ class Zztop extends Command {
       // zowe tso issue command
       {
         name: 'TsoCommand', action: async function () {
-          return IssueTso.issueTsoCommand(session, testDefinition.accountCode, `SEND 'Hello' USER(${userid})`)
+          try {
+            const response = await IssueTso.issueTsoCommand(session, testDefinition.accountCode, `SEND 'Hello' USER(${userid})`)
+            return response
+          }
+          catch (error) {
+            return { success: false, error: error }
+          }
         },
       },
       // zowe console issue command
