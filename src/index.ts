@@ -130,14 +130,14 @@ class Zztop extends Command {
       // zowe files upload ftu
       {
         name: 'FileUpload', action: async function () {
-          return await Upload.fileToUssFile(session, tmpCobolPath, testDefinition.unixDir + `/test.txt`)
+          return await Upload.fileToUssFile(session, tmpCobolPath, `${testDefinition.unixDir}/test${userNumber}.txt`)
         },
       },
       // zowe files download uf
       {
         name: 'FileDownload', action: async function () {
           const tmpDownloadPath = tmp.tmpNameSync()
-          const response = await Download.ussFile(session, testDefinition.unixDir + `/test.txt`, {file: tmpDownloadPath})
+          const response = await Download.ussFile(session, `${testDefinition.unixDir}/test${userNumber}.txt`, {file: tmpDownloadPath})
           unlinkSync(tmpDownloadPath)
           return response
         },
@@ -145,13 +145,13 @@ class Zztop extends Command {
       // zowe tso issue command
       {
         name: 'TsoCommand', action: async function () {
-          return await IssueTso.issueTsoCommand(session, testDefinition.accountCode, "SEND 'Hello' USER(" + userid +")")
+          return await IssueTso.issueTsoCommand(session, testDefinition.accountCode, `SEND 'Hello' USER(${userid})`)
         },
       },
       // zowe console issue command
       {
         name: 'ConsoleCommand', action: async function () {
-          return await IssueCommand.issue(session,{command: "D IPLINFO"})
+          return await IssueCommand.issue(session,{command: 'D IPLINFO'})
         },
       },
       // TODO:
