@@ -7,9 +7,7 @@
   "commandDelay": "2s",
   "scriptDelay": "15s",
   "concurrentUsers": 4,
-  "zosmfProfiles": [
-    "zzow01-zowep"
-  ],
+  "zosmfProfiles": ["zzow01-zowep"],
   "dsnSecondSegment": "ZZTOP",
   "unixDir": "/zaas1/zowep/zztop",
   "accountCode": "00000000",

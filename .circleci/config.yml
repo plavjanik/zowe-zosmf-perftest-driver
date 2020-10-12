@@ -15,6 +15,9 @@ jobs:
           name: Install dependencies
           command: npm ci
       - run:
+          name: Check style
+          command: npm run prettier-check
+      - run:
           name: Create profile
           command: npx zowe profiles create zosmf-profile zzow01-zowep --host zzow01.zowe.marist.cloud --port 10443 --user zowep --pass $ZOWEP_PASSWORD --reject-unauthorized false
       - run: ./bin/run --version

@@ -1,17 +1,17 @@
-import {test} from '@oclif/test'
+import { test } from "@oclif/test";
 
-import cmd = require('../src')
+import cmd = require("../src");
 
-describe('zztop', () => {
+describe("zztop", () => {
   test
-  .stdout()
-  .do(() => cmd.run([]))
-  .exit(2)
-  .it('fails without arguments')
+    .stdout()
+    .do(() => cmd.run([]))
+    .exit(2)
+    .it("fails without arguments");
 
   test
-  .stdout()
-  .do(() => cmd.run(['test/bad.json']))
-  .exit(2)
-  .it('fails with missing test def file')
-})
+    .stdout()
+    .do(() => cmd.run(["test/bad.json"]))
+    .exit(2)
+    .it("fails with missing test def file");
+});
