@@ -34,8 +34,9 @@
     "eslint": "^5.16.0",
     "eslint-config-oclif": "^3.1.0",
     "eslint-config-oclif-typescript": "^0.1.0",
-    "mocha": "^5.2.0",
+    "mocha": "5.2.0",
     "nyc": "^14.1.1",
+    "prettier": "2.1.2",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.7"
   },
@@ -59,6 +60,8 @@
   "scripts": {
     "eslint": "eslint . --ext .ts --config .eslintrc",
     "prepack": "rm -rf lib && tsc -b && oclif-dev readme",
+    "prettier": "prettier --write .",
+    "prettier-check": "prettier --check .",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
     "perftest": "cross-env PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. ./bin/run test/testdef.json"
   },
