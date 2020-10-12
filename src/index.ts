@@ -25,6 +25,7 @@ import {
   Upload,
   ZosmfSession,
 } from '@zowe/cli'
+import { execSync } from 'child_process';
 import {PerfTiming} from '@zowe/perf-timing'
 import parse from 'parse-duration'
 
@@ -236,6 +237,12 @@ class Zztop extends Command {
 
   async run() {
     const {args} = this.parse(Zztop)
+
+    this.log(`Node.js version: ${process.version}`);
+    this.log("Zowe version:");
+    execSync("zowe --version", {stdio: "inherit"})
+
+    Error.stackTraceLimit = 100;
 
     this.log(`Test definition file: ${args.file}`)
     if (!existsSync(args.file)) {
