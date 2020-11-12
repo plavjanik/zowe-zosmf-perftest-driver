@@ -10,7 +10,7 @@ import {
   IProfileLoaded,
   Session,
   Logger,
-  LoggingConfigurer
+  LoggingConfigurer,
 } from "@zowe/imperative";
 import {
   Create,
@@ -277,8 +277,8 @@ class Zztop extends Command {
         } catch (e) {
           response = {
             success: false,
-            exception: e
-          }
+            exception: e,
+          };
         }
         PerfTiming.api.mark("After" + test.name + userNumber);
         const responseString = JSON.stringify(response);
@@ -360,7 +360,9 @@ class Zztop extends Command {
   async run() {
     const { args } = this.parse(Zztop);
 
-    Logger.initLogger(LoggingConfigurer.configureLogger(".zztop", { name: "zztop" }));
+    Logger.initLogger(
+      LoggingConfigurer.configureLogger(".zztop", { name: "zztop" })
+    );
 
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
