@@ -1,6 +1,7 @@
 *-debug.log
 *-error.log
 requests.log
+*.log
 /.nyc_output
 /dist
 /tmp

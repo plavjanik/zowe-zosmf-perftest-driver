@@ -25,7 +25,15 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
 ## Usage
 
-1. Install package from NPM:
+1. Initialize empty NPM project:
+
+   ```bash
+   mkdir zztop
+   cd zztop
+   npm init -y
+   ```
+
+2. Install package from NPM:
 
    ```bash
    npm i @zowedev/zztop
@@ -33,7 +41,9 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
    Or you can clone this repository and run `npm install` in it.
 
-2. Create Zowe profiles for each user ID that will be used for testing:
+   This installs Zowe CLI too locally in the repository.
+
+3. Create Zowe profiles for each user ID that will be used for testing:
 
    Example:
 
@@ -43,7 +53,7 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
    Set the host and port to the values of the tested z/OSMF instance. Use a different profile name instead of `zzow01-zowep` for each user.
 
-3. Create test definition file `test.json` - example:
+4. Create test definition file `test.json` - example:
 
    ```json
    {
@@ -86,10 +96,35 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
    - months
    - years (y, yr)
 
-4. Run it:
+5. Run it:
 
    ```bash
    PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx @zowedev/zztop test.json
    ```
 
-5. Capture `requests.log`, `requests-error.log`, `metrics.1.json`, and the output of the command.
+6. Capture `requests.log`, `requests-error.log`, `metrics.1.json`, and the output of the command.
+
+## Installing on z/OS
+
+It has been tested with version 12.18.0 that has been installed following instructions in [Installing Node.js 12 on z/OS](https://levelup.gitconnected.com/installing-node-js-12-on-z-os-e5bf419826e6).
+
+This is sample profile that sets the expected environment variables:
+
+```sh
+export NODE_DIR={node_dir}
+export _BPXK_AUTOCVT=ON
+export _CEE_RUNOPTS="FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)"
+export PATH=${NODE_DIR}/node-v12.18.0-os390-s390x/bin/:$PATH
+```
+
+The JSON files need to be tagged. If you have created JSON file in EBCDIC then it needs to be tagged by:
+
+```sh
+chtag -t -c IBM-1047 test.json
+```
+
+If it is in ASCII then you need:
+
+```sh
+chtag -t -c ISO8859-1 test.json
+```

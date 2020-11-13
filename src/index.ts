@@ -9,6 +9,8 @@ import {
   ImperativeConfig,
   IProfileLoaded,
   Session,
+  Logger,
+  LoggingConfigurer,
 } from "@zowe/imperative";
 import {
   Create,
@@ -269,7 +271,15 @@ class Zztop extends Command {
         requestNumber++;
         const commandStartTime = new Date().getTime();
         PerfTiming.api.mark("Before" + test.name + userNumber);
-        const response = await test.action(); // eslint-disable-line no-await-in-loop
+        let response;
+        try {
+          response = await test.action(); // eslint-disable-line no-await-in-loop
+        } catch (e) {
+          response = {
+            success: false,
+            exception: e,
+          };
+        }
         PerfTiming.api.mark("After" + test.name + userNumber);
         const responseString = JSON.stringify(response);
         if (response.success) {
@@ -336,16 +346,25 @@ class Zztop extends Command {
     testUploadUssPath: string,
     tmpCobolPath: string
   ) {
-    this.log(`Cleaning up test data for user #${userNumber}`);
-    await DeleteJobs.deleteJob(session, testJobname, testJobid);
-    await Delete.dataSet(session, testDsn);
-    await Delete.ussFile(session, testUploadUssPath);
-    unlinkSync(tmpCobolPath);
+    try {
+      this.log(`Cleaning up test data for user #${userNumber}`);
+      await DeleteJobs.deleteJob(session, testJobname, testJobid);
+      await Delete.dataSet(session, testDsn);
+      await Delete.ussFile(session, testUploadUssPath);
+      unlinkSync(tmpCobolPath);
+    } catch (e) {
+      logger.error(`Error on cleaning up test data for user #${userNumber}`);
+    }
   }
 
   async run() {
     const { args } = this.parse(Zztop);
 
+    Logger.initLogger(
+      LoggingConfigurer.configureLogger(".zztop", { name: "zztop" })
+    );
+
+    this.log(`zztop version: ${this.config.version}`);
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
     execSync("zowe --version", { stdio: "inherit" });
