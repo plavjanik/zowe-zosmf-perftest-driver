@@ -27,31 +27,31 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
 1. Initialize empty NPM project:
 
-    ```bash
-    mkdir zztop
-    cd zztop
-    npm init -y
-    ```
+   ```bash
+   mkdir zztop
+   cd zztop
+   npm init -y
+   ```
 
 2. Install package from NPM:
 
-    ```bash
-    npm i @zowedev/zztop
-    ```
+   ```bash
+   npm i @zowedev/zztop
+   ```
 
-    Or you can clone this repository and run `npm install` in it.
+   Or you can clone this repository and run `npm install` in it.
 
-    This installs Zowe CLI too locally in the repository.
+   This installs Zowe CLI too locally in the repository.
 
 3. Create Zowe profiles for each user ID that will be used for testing:
 
-    Example:
+   Example:
 
-    ```bash
-    npx zowe profiles create zosmf-profile zzow01-zowep --host zzow01.zowe.marist.cloud --port 10443 --user userid --pass "passwd" --reject-unauthorized false --overwrite
-    ```
+   ```bash
+   npx zowe profiles create zosmf-profile zzow01-zowep --host zzow01.zowe.marist.cloud --port 10443 --user userid --pass "passwd" --reject-unauthorized false --overwrite
+   ```
 
-    Set the host and port to the values of the tested z/OSMF instance. Use a different profile name instead of `zzow01-zowep` for each user.
+   Set the host and port to the values of the tested z/OSMF instance. Use a different profile name instead of `zzow01-zowep` for each user.
 
 4. Create test definition file `test.json` - example:
 
@@ -106,7 +106,7 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
 ## Installing on z/OS
 
-It has been tested  with version 12.18.0 that has been installed following instructions in [Installing Node.js 12 on z/OS](https://levelup.gitconnected.com/installing-node-js-12-on-z-os-e5bf419826e6).
+It has been tested with version 12.18.0 that has been installed following instructions in [Installing Node.js 12 on z/OS](https://levelup.gitconnected.com/installing-node-js-12-on-z-os-e5bf419826e6).
 
 This is sample profile that sets the expected environment variables:
 
