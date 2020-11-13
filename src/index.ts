@@ -364,6 +364,7 @@ class Zztop extends Command {
       LoggingConfigurer.configureLogger(".zztop", { name: "zztop" })
     );
 
+    this.log(`zztop version: ${this.config.version}`);
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
     execSync("zowe --version", { stdio: "inherit" });
