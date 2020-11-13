@@ -41,7 +41,7 @@ jobs:
             git config --global user.email "plavjanik@gmail.com"
             git config --global user.name "Petr Plavjanik"
             npm version --no-git-tag-version `git describe --tags --abbrev=0 | cut -c2-`
-            npm pack
+            npm pack --unsafe-perm
             echo "//registry.npmjs.org/:_authToken=$NPMJS_TOKEN" > ~/.npmrc
             npm publish --access public
       - save_cache:
