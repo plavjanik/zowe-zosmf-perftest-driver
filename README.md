@@ -126,6 +126,33 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 
 6. Capture `zztop.log` log file.
 
+7. Capture the z/OSMF log (see below)
+
+8. Capture peformance data from RMF or using [Zowe Metrics Server](https://github.com/zowe/zowe-dependency-scan-pipeline/tree/master/performance/server)
+
+## Capturing z/OSMF Logs
+
+You need to login as user that has read access to `/var/zosmf/data/logs` or make them readable for your user ID by issuing these commands (only on server without sensitive data):
+
+```sh
+chmod a+rx /var/zosmf
+chmod a+rx /var/zosmf/data
+chmod -R a+rx /var/zosmf/data/logs
+```
+
+Then you can run on z/OS:
+
+```
+export JAVA_HOME="/sys/java64bt/v8r0m0/usr/lpp/java/J8.0_64"
+$JAVA_HOME/bin/jar cvfM zosmf-logs.zip /var/zosmf/data/logs/*.log /var/zosmf/data/logs/zosmfServer/logs/
+```
+
+And download it:
+
+```bash
+zowe zos-files download uss-file <path>/zosmf-logs.zip --binary --zosmf-profile <profile-to-zosmf-system>
+```
+
 ## Installing on z/OS
 
 It has been tested with version 12.18.0 that has been installed following instructions in [Installing Node.js 12 on z/OS](https://levelup.gitconnected.com/installing-node-js-12-on-z-os-e5bf419826e6).
