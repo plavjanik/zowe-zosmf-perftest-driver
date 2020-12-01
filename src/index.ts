@@ -118,7 +118,11 @@ class Zztop extends Command {
     // add --version flag to show CLI version
     version: flags.version({ char: "v" }),
     help: flags.help({ char: "h" }),
-    logLevel: flags.string({ char: "l", description: "Log level (debug, info)", default: "info" }),
+    logLevel: flags.string({
+      char: "l",
+      description: "Log level (debug, info)",
+      default: "info",
+    }),
   };
 
   static args = [
@@ -278,9 +282,14 @@ class Zztop extends Command {
     const tests: Test[] = [];
     for (const test of allTests) {
       if (testNames.indexOf(test.name) === -1) {
-        this.error(`Internal error: ${test.name} is not a valid test name: ${testNames}`)
+        this.error(
+          `Internal error: ${test.name} is not a valid test name: ${testNames}`
+        );
       }
-      if (!testDefinition.selectedTestNames || (testDefinition.selectedTestNames.indexOf(test.name) !== -1)) {
+      if (
+        !testDefinition.selectedTestNames ||
+        testDefinition.selectedTestNames.indexOf(test.name) !== -1
+      ) {
         tests.push(test);
       }
     }
@@ -295,7 +304,8 @@ class Zztop extends Command {
       for (const test of tests) {
         requestNumber++;
         loggerRequest.info(
-          `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: before action`);
+          `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: before action`
+        );
         const commandStartTime = new Date().getTime();
         let response;
         try {
@@ -309,7 +319,13 @@ class Zztop extends Command {
         const commandEndTime = new Date().getTime();
         const duration = commandEndTime - commandStartTime;
         const responseString = JSON.stringify(response);
-        durations.push({ success: response.success, duration: duration, userNumber: userNumber, testName: test.name, requestNumber: requestNumber} as Duration);
+        durations.push({
+          success: response.success,
+          duration: duration,
+          userNumber: userNumber,
+          testName: test.name,
+          requestNumber: requestNumber,
+        } as Duration);
         if (response.success) {
           successfulRequests++;
           loggerRequest.info(
@@ -332,7 +348,9 @@ class Zztop extends Command {
       ); // eslint-disable-line no-await-in-loop
     }
 
-    this.log(`Finished tests for ${userNumber} - ${userid} - successful: ${successfulRequests}, failed: ${failedRequests}`);
+    this.log(
+      `Finished tests for ${userNumber} - ${userid} - successful: ${successfulRequests}, failed: ${failedRequests}`
+    );
     await this.cleanupTestData(
       session,
       userNumber,
@@ -391,9 +409,13 @@ class Zztop extends Command {
       },
     });
 
-    console.log = function(){ logger.warn("console.log", arguments)};
+    console.log = function () {
+      logger.warn("console.log", arguments);
+    };
 
-    this.log(`All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`)
+    this.log(
+      `All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`
+    );
     this.log(`zztop version: ${this.config.version}`);
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
@@ -437,10 +459,10 @@ class Zztop extends Command {
     const allActivityStats = await Promise.all(promises);
     const totalActivityStats = { successfulRequests: 0, failedRequests: 0 };
 
-    const successfulCount: {[name: string]: number} = {};
-    const failedCount: {[name: string]: number} = {};
-    const successfulDuration: {[name: string]: number} = {};
-    const failedDuration: {[name: string]: number} = {};
+    const successfulCount: { [name: string]: number } = {};
+    const failedCount: { [name: string]: number } = {};
+    const successfulDuration: { [name: string]: number } = {};
+    const failedDuration: { [name: string]: number } = {};
     for (const testName of testNames) {
       successfulCount[testName] = 0;
       failedCount[testName] = 0;
@@ -462,8 +484,7 @@ class Zztop extends Command {
           successfulDuration[duration.testName] += duration.duration;
           successfulCount["TOTAL"]++;
           successfulDuration["TOTAL"] += duration.duration;
-        }
-        else {
+        } else {
           failedCount[duration.testName]++;
           failedDuration[duration.testName] += duration.duration;
           failedCount["TOTAL"]++;
@@ -474,9 +495,15 @@ class Zztop extends Command {
 
     const testNamesPlusTotal = [...testNames, "TOTAL"];
     for (const testName of testNamesPlusTotal) {
-      this.log(`Test ${testName} stats: successful ${successfulCount[testName]}, failed ${failedCount[testName]}` +
-      `, average successful duration: ${successfulDuration[testName] / successfulCount[testName]}` +
-      `, average faield duration: ${failedDuration[testName] / failedCount[testName]}`);
+      this.log(
+        `Test ${testName} stats: successful ${successfulCount[testName]}, failed ${failedCount[testName]}` +
+          `, average successful duration: ${
+            successfulDuration[testName] / successfulCount[testName]
+          }` +
+          `, average faield duration: ${
+            failedDuration[testName] / failedCount[testName]
+          }`
+      );
     }
   }
 
