@@ -1,14 +1,10 @@
-*-debug.log
-*-error.log
-requests.log
 *.log
 /.nyc_output
 /dist
 /tmp
 /yarn.lock
-node_modules
-imperative_debug.log
-metrics.1.json
+node_modules/
 /zztop-0.0.0.tgz
 .idea/sonarlint/
 lib/
+devtest/

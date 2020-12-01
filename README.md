@@ -77,6 +77,22 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
    }
    ```
 
+   Optionally, you can add `selectedTestNames` field which lists the subset of tests that will be executed:
+
+   ```json
+   "selectedTestNames": [
+      "DatasetUpload",
+      "DatasetDownload",
+      "FileUpload",
+      "FileDownload",
+      "TsoCommand",
+      "ConsoleCommand",
+      "JobSubmit",
+      "JobView",
+      "JobDownload"
+   ]
+   ```
+
    Use same profile names as in the step #2. Their number can be lower than the number of concurrent users.
    Provide valid values for `jobCard`, `dsnSecondSegment` and `unixDir`.
 
@@ -99,10 +115,16 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 5. Run it:
 
    ```bash
-   PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx @zowedev/zztop test.json
+   npx @zowedev/zztop test.json
    ```
 
-6. Capture `requests.log`, `requests-error.log`, `metrics.1.json`, and the output of the command.
+   If you want to capture all debugging messages:
+
+   ```bash
+   npx @zowedev/zztop --logLevel debug test.json
+   ```
+
+6. Capture `zztop.log` log file.
 
 ## Installing on z/OS
 

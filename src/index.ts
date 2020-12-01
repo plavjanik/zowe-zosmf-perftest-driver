@@ -1,5 +1,6 @@
+import { configure, getLogger } from "log4js";
 import { Command, flags } from "@oclif/command";
-import { existsSync, promises, readFileSync, unlinkSync } from "fs";
+import { existsSync, promises, readFileSync, Stats, unlinkSync } from "fs";
 import { join, resolve } from "path";
 import * as tmp from "tmp";
 import {
@@ -29,24 +30,23 @@ import {
   ZosmfSession,
 } from "@zowe/cli";
 import { execSync } from "child_process";
-import { PerfTiming } from "@zowe/perf-timing";
 import parse from "parse-duration";
 
 const filesizeParser = require("filesize-parser");
-const winston = require("winston");
+const logger = getLogger("zztop");
+const loggerRequest = getLogger("zztopRequest");
 
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.json(),
-  defaultMeta: { service: "user-service" },
-  transports: [
-    new winston.transports.File({
-      filename: "requests-error.log",
-      level: "error",
-    }),
-    new winston.transports.File({ filename: "requests.log" }),
-  ],
-});
+const testNames = [
+  "DatasetUpload",
+  "DatasetDownload",
+  "FileUpload",
+  "FileDownload",
+  "TsoCommand",
+  "ConsoleCommand",
+  "JobSubmit",
+  "JobView",
+  "JobDownload",
+];
 
 interface TestDefinition {
   name: string;
@@ -62,11 +62,26 @@ interface TestDefinition {
   unixDir: string;
   accountCode: string;
   jobCard: string[];
+  selectedTestNames: string[];
+}
+
+interface Test {
+  name: string;
+  action: any;
+}
+
+interface Duration {
+  duration: number;
+  requestNumber: number;
+  userNumber: number;
+  testName: string;
+  success: boolean;
 }
 
 interface ActivityStats {
   successfulRequests: number;
   failedRequests: number;
+  durations: Duration[];
 }
 
 async function initializeImperative() {
@@ -103,6 +118,7 @@ class Zztop extends Command {
     // add --version flag to show CLI version
     version: flags.version({ char: "v" }),
     help: flags.help({ char: "h" }),
+    logLevel: flags.string({ char: "l", description: "Log level (debug, info)", default: "info" }),
   };
 
   static args = [
@@ -126,7 +142,7 @@ class Zztop extends Command {
     const profile = zosmfProfilesByName[profileName];
     if (!profile || !profile.profile) {
       this.error(`Invalid profile name: ${profileName}`);
-      return { failedRequests: 0, successfulRequests: 0 };
+      return { failedRequests: 0, successfulRequests: 0, durations: [] };
     }
 
     const userid = profile.profile.user;
@@ -145,7 +161,7 @@ class Zztop extends Command {
 
     this.log(`Running tests for ${userNumber} - ${userid}`);
 
-    const tests = [
+    const allTests: Test[] = [
       // zowe files upload ftds
       {
         name: "DatasetUpload",
@@ -215,7 +231,7 @@ class Zztop extends Command {
           return IssueCommand.issue(session, { command: "D IPLINFO" });
         },
       },
-      // zowe jobs submit [PP]
+      // zowe jobs submit
       {
         name: "JobSubmit",
         action: async function () {
@@ -232,7 +248,7 @@ class Zztop extends Command {
           return { success: true, job: job, cleanupPromise: promise };
         },
       },
-      // zowe jobs view [PP]
+      // zowe jobs view
       {
         name: "JobView",
         action: async function () {
@@ -244,7 +260,7 @@ class Zztop extends Command {
           return { success: spoolFiles.length > 0, spoolFiles: spoolFiles };
         },
       },
-      // zowe jobs download [PP]
+      // zowe jobs download
       {
         name: "JobDownload",
         action: async function () {
@@ -259,18 +275,28 @@ class Zztop extends Command {
       },
     ];
 
+    const tests: Test[] = [];
+    for (const test of allTests) {
+      if (testNames.indexOf(test.name) === -1) {
+        this.error(`Internal error: ${test.name} is not a valid test name: ${testNames}`)
+      }
+      if (!testDefinition.selectedTestNames || (testDefinition.selectedTestNames.indexOf(test.name) !== -1)) {
+        tests.push(test);
+      }
+    }
+
     let successfulRequests = 0;
     let failedRequests = 0;
     const startTime = new Date().getTime();
     let requestNumber = 0;
+    let durations = [];
     while (new Date().getTime() - startTime <= duration) {
       const scriptStartTime = new Date().getTime();
-      PerfTiming.api.mark("BeforeScript" + userNumber);
-
       for (const test of tests) {
         requestNumber++;
+        loggerRequest.info(
+          `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: before action`);
         const commandStartTime = new Date().getTime();
-        PerfTiming.api.mark("Before" + test.name + userNumber);
         let response;
         try {
           response = await test.action(); // eslint-disable-line no-await-in-loop
@@ -280,27 +306,19 @@ class Zztop extends Command {
             exception: e,
           };
         }
-        PerfTiming.api.mark("After" + test.name + userNumber);
+        const commandEndTime = new Date().getTime();
+        const duration = commandEndTime - commandStartTime;
         const responseString = JSON.stringify(response);
+        durations.push({ success: response.success, duration: duration, userNumber: userNumber, testName: test.name, requestNumber: requestNumber} as Duration);
         if (response.success) {
-          PerfTiming.api.measure(
-            test.name,
-            "Before" + test.name + userNumber,
-            "After" + test.name + userNumber
-          );
           successfulRequests++;
-          logger.info(
-            `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`
+          loggerRequest.info(
+            `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name} successful in ${duration} ms: ${responseString}`
           );
         } else {
-          PerfTiming.api.measure(
-            test.name + "Failed",
-            "Before" + test.name + userNumber,
-            "After" + test.name + userNumber
-          );
           failedRequests++;
-          logger.error(
-            `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name}: ${responseString}`
+          loggerRequest.error(
+            `User #${userNumber} ${userid} - Request ${requestNumber} - Test ${test.name} failed in ${duration} ms: ${responseString}`
           );
         }
 
@@ -308,19 +326,13 @@ class Zztop extends Command {
           Math.max(commandDelay - (new Date().getTime() - commandStartTime), 0)
         ); // eslint-disable-line no-await-in-loop
       }
-      PerfTiming.api.mark("AfterScript" + userNumber);
-      PerfTiming.api.measure(
-        "Script",
-        "BeforeScript" + userNumber,
-        "AfterScript" + userNumber
-      );
 
       await sleep(
         Math.max(scriptDelay - (new Date().getTime() - scriptStartTime), 0)
       ); // eslint-disable-line no-await-in-loop
     }
 
-    this.log(`Finished tests for ${userNumber} - ${userid}`);
+    this.log(`Finished tests for ${userNumber} - ${userid} - successful: ${successfulRequests}, failed: ${failedRequests}`);
     await this.cleanupTestData(
       session,
       userNumber,
@@ -334,6 +346,7 @@ class Zztop extends Command {
     return {
       failedRequests: failedRequests,
       successfulRequests: successfulRequests,
+      durations: durations,
     };
   }
 
@@ -357,16 +370,34 @@ class Zztop extends Command {
     }
   }
 
+  log(message: string): void {
+    logger.info(message);
+  }
+
   async run() {
-    const { args } = this.parse(Zztop);
+    const { args, flags } = this.parse(Zztop);
 
-    Logger.initLogger(
-      LoggingConfigurer.configureLogger(".zztop", { name: "zztop" })
-    );
+    await initializeImperative();
 
+    configure({
+      appenders: {
+        out: { type: "stdout" },
+        log: { type: "file", filename: "zztop.log" },
+      },
+      categories: {
+        default: { appenders: ["log"], level: flags.logLevel },
+        zztop: { appenders: ["log", "out"], level: flags.logLevel },
+        zztopRequest: { appenders: ["log"], level: flags.logLevel },
+      },
+    });
+
+    console.log = function(){ logger.warn("console.log", arguments)};
+
+    this.log(`All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`)
     this.log(`zztop version: ${this.config.version}`);
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
+
     execSync("zowe --version", { stdio: "inherit" });
 
     Error.stackTraceLimit = 100;
@@ -376,18 +407,10 @@ class Zztop extends Command {
       this.error(`File ${resolve(args.file)} does not exist`);
     }
 
-    if (!PerfTiming.isEnabled) {
-      this.error(
-        "PerfTiming is not enabled. Set environment variables: PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=.",
-        { exit: 1 }
-      );
-    }
-
     const testDefinition: TestDefinition = JSON.parse(
       readFileSync(args.file, "utf8")
     );
     this.log(`${JSON.stringify(testDefinition, null, 2)}`);
-    await initializeImperative();
 
     const profiles = await new CliProfileManager({
       profileRootDirectory: join(ImperativeConfig.instance.cliHome, "profiles"),
@@ -413,39 +436,48 @@ class Zztop extends Command {
 
     const allActivityStats = await Promise.all(promises);
     const totalActivityStats = { successfulRequests: 0, failedRequests: 0 };
+
+    const successfulCount: {[name: string]: number} = {};
+    const failedCount: {[name: string]: number} = {};
+    const successfulDuration: {[name: string]: number} = {};
+    const failedDuration: {[name: string]: number} = {};
+    for (const testName of testNames) {
+      successfulCount[testName] = 0;
+      failedCount[testName] = 0;
+      successfulDuration[testName] = 0;
+      failedDuration[testName] = 0;
+    }
+    successfulCount["TOTAL"] = 0;
+    failedCount["TOTAL"] = 0;
+    successfulDuration["TOTAL"] = 0;
+    failedDuration["TOTAL"] = 0;
+
     for (const stats of allActivityStats) {
       totalActivityStats.successfulRequests += stats.successfulRequests;
       totalActivityStats.failedRequests += stats.failedRequests;
-    }
 
-    await sleep(1000);
-    const testNames = [
-      "DatasetUpload",
-      "DatasetDownload",
-      "FileUpload",
-      "FileDownload",
-      "TsoCommand",
-      "ConsoleCommand",
-      "JobSubmit",
-      "JobView",
-      "JobDownload",
-      "Script",
-    ];
-    for (const measurement of PerfTiming.api.getMetrics().measurements) {
-      for (const testName of testNames) {
-        if (measurement.name === testName) {
-          this.log(
-            `Average successful ${testName}: ${measurement.averageDuration} ms`
-          );
+      for (const duration of stats.durations) {
+        if (duration.success) {
+          successfulCount[duration.testName]++;
+          successfulDuration[duration.testName] += duration.duration;
+          successfulCount["TOTAL"]++;
+          successfulDuration["TOTAL"] += duration.duration;
         }
-        if (measurement.name === testName + "Failed") {
-          this.log(
-            `Average failed ${testName}: ${measurement.averageDuration} ms`
-          );
+        else {
+          failedCount[duration.testName]++;
+          failedDuration[duration.testName] += duration.duration;
+          failedCount["TOTAL"]++;
+          failedDuration["TOTAL"] += duration.duration;
         }
       }
     }
-    this.log("Total activity count", JSON.stringify(totalActivityStats));
+
+    const testNamesPlusTotal = [...testNames, "TOTAL"];
+    for (const testName of testNamesPlusTotal) {
+      this.log(`Test ${testName} stats: successful ${successfulCount[testName]}, failed ${failedCount[testName]}` +
+      `, average successful duration: ${successfulDuration[testName] / successfulCount[testName]}` +
+      `, average faield duration: ${failedDuration[testName] / failedCount[testName]}`);
+    }
   }
 
   private async prepareTestData(
@@ -469,15 +501,17 @@ class Zztop extends Command {
       testSpoolId,
     } = await this.prepareTestJob(testDefinition, userNumber, session);
     this.log(
-      "Prepared test data",
-      userNumber,
-      "-",
-      tmpCobolPath,
-      testDsn,
-      testJobname,
-      testJobid,
-      testSpoolId,
-      testUploadUssPath
+      "Prepared test data: " +
+        JSON.stringify([
+          userNumber,
+          "-",
+          tmpCobolPath,
+          testDsn,
+          testJobname,
+          testJobid,
+          testSpoolId,
+          testUploadUssPath,
+        ])
     );
     return {
       tmpCobolPath,
@@ -511,7 +545,7 @@ class Zztop extends Command {
       "." +
       testDefinition.dsnSecondSegment +
       `.U${userNumber}`;
-    this.log(testDsn);
+    this.log(`Preparing test dataset: ${testDsn}`);
     const exists = await datasetExists(session, testDsn);
     if (!exists) {
       const response = await Create.dataSet(
