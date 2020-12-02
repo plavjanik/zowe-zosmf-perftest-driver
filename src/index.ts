@@ -514,8 +514,10 @@ class Zztop extends Command {
   ) {
     if (userNumber == 0) {
       this.log(`Checking directory for USS actions: ${testDefinition.unixDir}`);
-      if (!await Upload.isDirectoryExist(session, testDefinition.unixDir)) {
-        this.log(`Creating directory for USS actions: ${testDefinition.unixDir}`);
+      if (!(await Upload.isDirectoryExist(session, testDefinition.unixDir))) {
+        this.log(
+          `Creating directory for USS actions: ${testDefinition.unixDir}`
+        );
         await Create.uss(session, testDefinition.unixDir, "directory");
       }
     }
