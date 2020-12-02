@@ -419,7 +419,6 @@ class Zztop extends Command {
     this.log(`zztop version: ${this.config.version}`);
     this.log(`Node.js version: ${process.version}`);
     this.log("Zowe version:");
-
     execSync("zowe --version", { stdio: "inherit" });
 
     Error.stackTraceLimit = 100;
@@ -513,6 +512,13 @@ class Zztop extends Command {
     userNumber: number,
     session: Session
   ) {
+    if (userNumber == 0) {
+      this.log(`Checking directory for USS actions: ${testDefinition.unixDir}`);
+      if (!await Upload.isDirectoryExist(session, testDefinition.unixDir)) {
+        this.log(`Creating directory for USS actions: ${testDefinition.unixDir}`);
+        await Create.uss(session, testDefinition.unixDir, "directory");
+      }
+    }
     const tmpCobolPath = await this.prepareTestFile(testDefinition);
     const testDsn = await this.prepareTestDataset(
       userid,
