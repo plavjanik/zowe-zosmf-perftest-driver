@@ -77,6 +77,22 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
    }
    ```
 
+   Optionally, you can add `selectedTestNames` field which lists the subset of tests that will be executed:
+
+   ```json
+   "selectedTestNames": [
+      "DatasetUpload",
+      "DatasetDownload",
+      "FileUpload",
+      "FileDownload",
+      "TsoCommand",
+      "ConsoleCommand",
+      "JobSubmit",
+      "JobView",
+      "JobDownload"
+   ]
+   ```
+
    Use same profile names as in the step #2. Their number can be lower than the number of concurrent users.
    Provide valid values for `jobCard`, `dsnSecondSegment` and `unixDir`.
 
@@ -99,10 +115,43 @@ Design document: <https://docs.google.com/document/d/1UEOSERYf7qSXGZY-w1aqI8kBfj
 5. Run it:
 
    ```bash
-   PERF_TIMING_ENABLED=TRUE PERF_TIMING_IO_MAX_HISTORY=1 PERF_TIMING_IO_SAVE_DIR=. npx @zowedev/zztop test.json
+   npx @zowedev/zztop test.json
    ```
 
-6. Capture `requests.log`, `requests-error.log`, `metrics.1.json`, and the output of the command.
+   If you want to capture all debugging messages:
+
+   ```bash
+   npx @zowedev/zztop --logLevel debug test.json
+   ```
+
+6. Capture `zztop.log` log file.
+
+7. Capture the z/OSMF log (see below)
+
+8. Capture peformance data from RMF or using [Zowe Metrics Server](https://github.com/zowe/zowe-dependency-scan-pipeline/tree/master/performance/server)
+
+## Capturing z/OSMF Logs
+
+You need to login as user that has read access to `/var/zosmf/data/logs` or make them readable for your user ID by issuing these commands (only on server without sensitive data):
+
+```sh
+chmod a+rx /var/zosmf
+chmod a+rx /var/zosmf/data
+chmod -R a+rx /var/zosmf/data/logs
+```
+
+Then you can run on z/OS:
+
+```
+export JAVA_HOME="/sys/java64bt/v8r0m0/usr/lpp/java/J8.0_64"
+$JAVA_HOME/bin/jar cvfM zosmf-logs.zip /var/zosmf/data/logs/*.log /var/zosmf/data/logs/zosmfServer/logs/
+```
+
+And download it:
+
+```bash
+zowe zos-files download uss-file <path>/zosmf-logs.zip --binary --zosmf-profile <profile-to-zosmf-system>
+```
 
 ## Installing on z/OS
 
