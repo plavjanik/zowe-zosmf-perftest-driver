@@ -55,6 +55,7 @@ interface TestDefinition {
   jobOutputSize: string;
   duration: string;
   commandDelay: string;
+  initialScriptDelay: string;
   scriptDelay: string;
   concurrentUsers: number;
   zosmfProfiles: string[];
@@ -136,8 +137,9 @@ class Zztop extends Command {
   ): Promise<ActivityStats> {
     const scriptDelay = parse(testDefinition.scriptDelay) || 1000;
     const commandDelay = parse(testDefinition.commandDelay) || 1000;
+    const initialScriptDelay = parse(testDefinition.initialScriptDelay) || commandDelay;
     const duration = parse(testDefinition.duration) || 1000;
-    await sleep(scriptDelay * userNumber);
+    await sleep(initialScriptDelay * userNumber);
 
     const profileName =
       testDefinition.zosmfProfiles[
@@ -499,7 +501,7 @@ class Zztop extends Command {
           `, average successful duration: ${
             successfulDuration[testName] / successfulCount[testName]
           }` +
-          `, average faield duration: ${
+          `, average failed duration: ${
             failedDuration[testName] / failedCount[testName]
           }`
       );
