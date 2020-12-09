@@ -137,7 +137,8 @@ class Zztop extends Command {
   ): Promise<ActivityStats> {
     const scriptDelay = parse(testDefinition.scriptDelay) || 1000;
     const commandDelay = parse(testDefinition.commandDelay) || 1000;
-    const initialScriptDelay = parse(testDefinition.initialScriptDelay) || commandDelay;
+    const initialScriptDelay =
+      parse(testDefinition.initialScriptDelay) || commandDelay;
     const duration = parse(testDefinition.duration) || 1000;
     await sleep(initialScriptDelay * userNumber);
 
