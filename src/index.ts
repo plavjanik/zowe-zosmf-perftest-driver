@@ -173,46 +173,66 @@ class Zztop extends Command {
       {
         name: "DatasetUpload",
         action: async function () {
-          return Upload.fileToDataset(
-            session,
-            tmpCobolPath,
-            testDsn + "(TEST1)"
-          );
+          try {
+            return Upload.fileToDataset(
+              session,
+              tmpCobolPath,
+              testDsn + "(TEST1)"
+            );
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe files download ds
       {
         name: "DatasetDownload",
         action: async function () {
-          const tmpDownloadPath = tmp.tmpNameSync();
-          const response = await Download.dataSet(
-            session,
-            testDsn + "(TEST1)",
-            { file: tmpDownloadPath }
-          );
-          unlinkSync(tmpDownloadPath);
-          return response;
+          try {
+            const tmpDownloadPath = tmp.tmpNameSync();
+            const response = await Download.dataSet(
+              session,
+              testDsn + "(TEST1)",
+              { file: tmpDownloadPath }
+            );
+            unlinkSync(tmpDownloadPath);
+            return response;
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe files upload ftu
       {
         name: "FileUpload",
         action: async function () {
-          return Upload.fileToUssFile(session, tmpCobolPath, testUploadUssPath);
+          try {
+            return Upload.fileToUssFile(
+              session,
+              tmpCobolPath,
+              testUploadUssPath
+            );
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe files download uf
       {
         name: "FileDownload",
         action: async function () {
-          const tmpDownloadPath = tmp.tmpNameSync();
-          const response = await Download.ussFile(
-            session,
-            `${testDefinition.unixDir}/test${userNumber}.txt`,
-            { file: tmpDownloadPath }
-          );
-          unlinkSync(tmpDownloadPath);
-          return response;
+          try {
+            const tmpDownloadPath = tmp.tmpNameSync();
+            const response = await Download.ussFile(
+              session,
+              `${testDefinition.unixDir}/test${userNumber}.txt`,
+              { file: tmpDownloadPath }
+            );
+            unlinkSync(tmpDownloadPath);
+            return response;
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe tso issue command
@@ -242,42 +262,54 @@ class Zztop extends Command {
       {
         name: "JobSubmit",
         action: async function () {
-          const job = await SubmitJobs.submitJcl(session, testJcl);
-          const cleanup = async function () {
-            await MonitorJobs.waitForOutputStatus(
-              session,
-              job.jobname,
-              job.jobid
-            );
-            await DeleteJobs.deleteJob(session, job.jobname, job.jobid);
-          };
-          const promise = cleanup();
-          return { success: true, job: job, cleanupPromise: promise };
+          try {
+            const job = await SubmitJobs.submitJcl(session, testJcl);
+            const cleanup = async function () {
+              await MonitorJobs.waitForOutputStatus(
+                session,
+                job.jobname,
+                job.jobid
+              );
+              await DeleteJobs.deleteJob(session, job.jobname, job.jobid);
+            };
+            const promise = cleanup();
+            return { success: true, job: job, cleanupPromise: promise };
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe jobs view
       {
         name: "JobView",
         action: async function () {
-          const spoolFiles = await GetJobs.getSpoolFiles(
-            session,
-            testJobname,
-            testJobid
-          );
-          return { success: spoolFiles.length > 0, spoolFiles: spoolFiles };
+          try {
+            const spoolFiles = await GetJobs.getSpoolFiles(
+              session,
+              testJobname,
+              testJobid
+            );
+            return { success: spoolFiles.length > 0, spoolFiles: spoolFiles };
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
       // zowe jobs download
       {
         name: "JobDownload",
         action: async function () {
-          const spoolContent = await GetJobs.getSpoolContentById(
-            session,
-            testJobname,
-            testJobid,
-            testSpoolId
-          );
-          return { success: spoolContent.length > 0, content: spoolContent };
+          try {
+            const spoolContent = await GetJobs.getSpoolContentById(
+              session,
+              testJobname,
+              testJobid,
+              testSpoolId
+            );
+            return { success: spoolContent.length > 0, content: spoolContent };
+          } catch (error) {
+            return { success: false, error: error };
+          }
         },
       },
     ];
