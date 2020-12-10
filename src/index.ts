@@ -174,82 +174,58 @@ class Zztop extends Command {
       {
         name: "DatasetUpload",
         action: async function () {
-          try {
-            return Upload.fileToDataset(
-              session,
-              tmpCobolPath,
-              testDsn + "(TEST1)"
-            );
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          return Upload.fileToDataset(
+            session,
+            tmpCobolPath,
+            testDsn + "(TEST1)"
+          );
         },
       },
       // zowe files download ds
       {
         name: "DatasetDownload",
         action: async function () {
-          try {
-            const tmpDownloadPath = tmp.tmpNameSync();
-            const response = await Download.dataSet(
-              session,
-              testDsn + "(TEST1)",
-              { file: tmpDownloadPath }
-            );
-            unlinkSync(tmpDownloadPath);
-            return response;
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const tmpDownloadPath = tmp.tmpNameSync();
+          const response = await Download.dataSet(
+            session,
+            testDsn + "(TEST1)",
+            { file: tmpDownloadPath }
+          );
+          unlinkSync(tmpDownloadPath);
+          return response;
         },
       },
       // zowe files upload ftu
       {
         name: "FileUpload",
         action: async function () {
-          try {
-            return Upload.fileToUssFile(
-              session,
-              tmpCobolPath,
-              testUploadUssPath
-            );
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          return Upload.fileToUssFile(session, tmpCobolPath, testUploadUssPath);
         },
       },
       // zowe files download uf
       {
         name: "FileDownload",
         action: async function () {
-          try {
-            const tmpDownloadPath = tmp.tmpNameSync();
-            const response = await Download.ussFile(
-              session,
-              `${testDefinition.unixDir}/test${userNumber}.txt`,
-              { file: tmpDownloadPath }
-            );
-            unlinkSync(tmpDownloadPath);
-            return response;
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const tmpDownloadPath = tmp.tmpNameSync();
+          const response = await Download.ussFile(
+            session,
+            `${testDefinition.unixDir}/test${userNumber}.txt`,
+            { file: tmpDownloadPath }
+          );
+          unlinkSync(tmpDownloadPath);
+          return response;
         },
       },
       // zowe tso issue command
       {
         name: "TsoCommand",
         action: async function () {
-          try {
-            const response = await IssueTso.issueTsoCommand(
-              session,
-              testDefinition.accountCode,
-              `SEND 'Hello' USER(${userid})`
-            );
-            return response;
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const response = await IssueTso.issueTsoCommand(
+            session,
+            testDefinition.accountCode,
+            `SEND 'Hello' USER(${userid})`
+          );
+          return response;
         },
       },
       // zowe console issue command
@@ -263,54 +239,42 @@ class Zztop extends Command {
       {
         name: "JobSubmit",
         action: async function () {
-          try {
-            const job = await SubmitJobs.submitJcl(session, testJcl);
-            const cleanup = async function () {
-              await MonitorJobs.waitForOutputStatus(
-                session,
-                job.jobname,
-                job.jobid
-              );
-              await DeleteJobs.deleteJob(session, job.jobname, job.jobid);
-            };
-            const promise = cleanup();
-            return { success: true, job: job, cleanupPromise: promise };
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const job = await SubmitJobs.submitJcl(session, testJcl);
+          const cleanup = async function () {
+            await MonitorJobs.waitForOutputStatus(
+              session,
+              job.jobname,
+              job.jobid
+            );
+            await DeleteJobs.deleteJob(session, job.jobname, job.jobid);
+          };
+          const promise = cleanup();
+          return { success: true, job: job, cleanupPromise: promise };
         },
       },
       // zowe jobs view
       {
         name: "JobView",
         action: async function () {
-          try {
-            const spoolFiles = await GetJobs.getSpoolFiles(
-              session,
-              testJobname,
-              testJobid
-            );
-            return { success: spoolFiles.length > 0, spoolFiles: spoolFiles };
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const spoolFiles = await GetJobs.getSpoolFiles(
+            session,
+            testJobname,
+            testJobid
+          );
+          return { success: spoolFiles.length > 0, spoolFiles: spoolFiles };
         },
       },
       // zowe jobs download
       {
         name: "JobDownload",
         action: async function () {
-          try {
-            const spoolContent = await GetJobs.getSpoolContentById(
-              session,
-              testJobname,
-              testJobid,
-              testSpoolId
-            );
-            return { success: spoolContent.length > 0, content: spoolContent };
-          } catch (error) {
-            return { success: false, error: error };
-          }
+          const spoolContent = await GetJobs.getSpoolContentById(
+            session,
+            testJobname,
+            testJobid,
+            testSpoolId
+          );
+          return { success: spoolContent.length > 0, content: spoolContent };
         },
       },
     ];
@@ -347,6 +311,7 @@ class Zztop extends Command {
         try {
           response = await test.action(); // eslint-disable-line no-await-in-loop
         } catch (e) {
+          logger.warn(e);
           response = {
             success: false,
             exception: e,
@@ -429,116 +394,125 @@ class Zztop extends Command {
   }
 
   async run() {
-    const { args, flags } = this.parse(Zztop);
+    try {
+      const { args, flags } = this.parse(Zztop);
 
-    await initializeImperative();
+      await initializeImperative();
 
-    configure({
-      appenders: {
-        out: { type: "stdout" },
-        log: { type: "file", filename: "zztop.log" },
-      },
-      categories: {
-        default: { appenders: ["log"], level: flags.logLevel },
-        zztop: { appenders: ["log", "out"], level: flags.logLevel },
-        zztopRequest: { appenders: ["log"], level: flags.logLevel },
-      },
-    });
+      configure({
+        appenders: {
+          out: { type: "stdout" },
+          log: { type: "file", filename: "zztop.log" },
+        },
+        categories: {
+          default: { appenders: ["log"], level: flags.logLevel },
+          zztop: { appenders: ["log", "out"], level: flags.logLevel },
+          zztopRequest: { appenders: ["log"], level: flags.logLevel },
+        },
+      });
 
-    console.log = function () {
-      logger.warn("console.log", arguments);
-    };
+      console.log = function () {
+        logger.warn("console.log", arguments);
+      };
 
-    this.log(
-      `All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`
-    );
-    this.log(`zztop version: ${this.config.version}`);
-    this.log(`Node.js version: ${process.version}`);
-    this.log("Zowe version:");
-    execSync("zowe --version", { stdio: "inherit" });
+      this.log(
+        `All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`
+      );
+      this.log(`zztop version: ${this.config.version}`);
+      this.log(`Node.js version: ${process.version}`);
+      this.log("Zowe version:");
+      execSync("zowe --version", { stdio: "inherit" });
 
-    Error.stackTraceLimit = 100;
+      Error.stackTraceLimit = 100;
 
-    this.log(`Test definition file: ${args.file}`);
-    if (!existsSync(args.file)) {
-      this.error(`File ${resolve(args.file)} does not exist`);
-    }
-
-    const testDefinition: TestDefinition = JSON.parse(
-      readFileSync(args.file, "utf8")
-    );
-    this.log(`${JSON.stringify(testDefinition, null, 2)}`);
-
-    const profiles = await new CliProfileManager({
-      profileRootDirectory: join(ImperativeConfig.instance.cliHome, "profiles"),
-      type: "zosmf",
-    }).loadAll();
-
-    const zosmfProfiles = profiles.filter((profile) => {
-      return profile.type === "zosmf";
-    });
-
-    const zosmfProfilesByName: { [name: string]: IProfileLoaded } = {};
-
-    for (const profile of zosmfProfiles) {
-      if (profile.name) {
-        zosmfProfilesByName[profile.name] = profile;
+      this.log(`Test definition file: ${args.file}`);
+      if (!existsSync(args.file)) {
+        this.error(`File ${resolve(args.file)} does not exist`);
       }
-    }
 
-    const promises: Promise<ActivityStats>[] = [];
-    for (let i = 0; i < testDefinition.concurrentUsers; i++) {
-      promises.push(this.userActivity(i, testDefinition, zosmfProfilesByName));
-    }
+      const testDefinition: TestDefinition = JSON.parse(
+        readFileSync(args.file, "utf8")
+      );
+      this.log(`${JSON.stringify(testDefinition, null, 2)}`);
 
-    const allActivityStats = await Promise.all(promises);
-    const totalActivityStats = { successfulRequests: 0, failedRequests: 0 };
+      const profiles = await new CliProfileManager({
+        profileRootDirectory: join(
+          ImperativeConfig.instance.cliHome,
+          "profiles"
+        ),
+        type: "zosmf",
+      }).loadAll();
 
-    const successfulCount: { [name: string]: number } = {};
-    const failedCount: { [name: string]: number } = {};
-    const successfulDuration: { [name: string]: number } = {};
-    const failedDuration: { [name: string]: number } = {};
-    for (const testName of testNames) {
-      successfulCount[testName] = 0;
-      failedCount[testName] = 0;
-      successfulDuration[testName] = 0;
-      failedDuration[testName] = 0;
-    }
-    successfulCount["TOTAL"] = 0;
-    failedCount["TOTAL"] = 0;
-    successfulDuration["TOTAL"] = 0;
-    failedDuration["TOTAL"] = 0;
+      const zosmfProfiles = profiles.filter((profile) => {
+        return profile.type === "zosmf";
+      });
 
-    for (const stats of allActivityStats) {
-      totalActivityStats.successfulRequests += stats.successfulRequests;
-      totalActivityStats.failedRequests += stats.failedRequests;
+      const zosmfProfilesByName: { [name: string]: IProfileLoaded } = {};
 
-      for (const duration of stats.durations) {
-        if (duration.success) {
-          successfulCount[duration.testName]++;
-          successfulDuration[duration.testName] += duration.duration;
-          successfulCount["TOTAL"]++;
-          successfulDuration["TOTAL"] += duration.duration;
-        } else {
-          failedCount[duration.testName]++;
-          failedDuration[duration.testName] += duration.duration;
-          failedCount["TOTAL"]++;
-          failedDuration["TOTAL"] += duration.duration;
+      for (const profile of zosmfProfiles) {
+        if (profile.name) {
+          zosmfProfilesByName[profile.name] = profile;
         }
       }
-    }
 
-    const testNamesPlusTotal = [...testNames, "TOTAL"];
-    for (const testName of testNamesPlusTotal) {
-      this.log(
-        `Test ${testName} stats: successful ${successfulCount[testName]}, failed ${failedCount[testName]}` +
-          `, average successful duration: ${
-            successfulDuration[testName] / successfulCount[testName]
-          }` +
-          `, average failed duration: ${
-            failedDuration[testName] / failedCount[testName]
-          }`
-      );
+      const promises: Promise<ActivityStats>[] = [];
+      for (let i = 0; i < testDefinition.concurrentUsers; i++) {
+        promises.push(
+          this.userActivity(i, testDefinition, zosmfProfilesByName)
+        );
+      }
+
+      const allActivityStats = await Promise.all(promises);
+      const totalActivityStats = { successfulRequests: 0, failedRequests: 0 };
+
+      const successfulCount: { [name: string]: number } = {};
+      const failedCount: { [name: string]: number } = {};
+      const successfulDuration: { [name: string]: number } = {};
+      const failedDuration: { [name: string]: number } = {};
+      for (const testName of testNames) {
+        successfulCount[testName] = 0;
+        failedCount[testName] = 0;
+        successfulDuration[testName] = 0;
+        failedDuration[testName] = 0;
+      }
+      successfulCount["TOTAL"] = 0;
+      failedCount["TOTAL"] = 0;
+      successfulDuration["TOTAL"] = 0;
+      failedDuration["TOTAL"] = 0;
+
+      for (const stats of allActivityStats) {
+        totalActivityStats.successfulRequests += stats.successfulRequests;
+        totalActivityStats.failedRequests += stats.failedRequests;
+
+        for (const duration of stats.durations) {
+          if (duration.success) {
+            successfulCount[duration.testName]++;
+            successfulDuration[duration.testName] += duration.duration;
+            successfulCount["TOTAL"]++;
+            successfulDuration["TOTAL"] += duration.duration;
+          } else {
+            failedCount[duration.testName]++;
+            failedDuration[duration.testName] += duration.duration;
+            failedCount["TOTAL"]++;
+            failedDuration["TOTAL"] += duration.duration;
+          }
+        }
+      }
+
+      const testNamesPlusTotal = [...testNames, "TOTAL"];
+      for (const testName of testNamesPlusTotal) {
+        this.log(
+          `Test ${testName} stats: successful ${successfulCount[testName]}, failed ${failedCount[testName]}` +
+            `, average successful duration: ${
+              successfulDuration[testName] / successfulCount[testName]
+            }` +
+            `, average failed duration: ${
+              failedDuration[testName] / failedCount[testName]
+            }`
+        );
+      }
+    } catch (e) {
+      logger.fatal("Unhandled error", e);
     }
   }
 
@@ -566,7 +540,7 @@ class Zztop extends Command {
       userNumber,
       session
     );
-    const testUploadUssPath = `${testDefinition.unixDir}/test${userNumber}.txt`;
+    const testUploadUssPath = `${testDefinition.unixDir}/test${userNumber}_${userid}.txt`;
     const {
       testJcl,
       testJobid,
