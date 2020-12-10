@@ -14,6 +14,7 @@ import {
   LoggingConfigurer,
 } from "@zowe/imperative";
 import {
+  CheckStatus,
   Create,
   CreateDataSetTypeEnum,
   Delete,
@@ -555,6 +556,8 @@ class Zztop extends Command {
         );
         await Create.uss(session, testDefinition.unixDir, "directory");
       }
+      const zosfmInfo = await CheckStatus.getZosmfInfo(session);
+      this.log("z/OSMF information: " + JSON.stringify(zosfmInfo, null, 2));
     }
     const tmpCobolPath = await this.prepareTestFile(testDefinition);
     const testDsn = await this.prepareTestDataset(
