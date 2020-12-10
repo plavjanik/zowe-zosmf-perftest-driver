@@ -219,7 +219,7 @@ class Zztop extends Command {
             const tmpDownloadPath = tmp.tmpNameSync();
             const response = await Download.ussFile(
               session,
-              `${testDefinition.unixDir}/test${userNumber}.txt`,
+              `${testDefinition.unixDir}/test${userNumber}_${userid}.txt`,
               { file: tmpDownloadPath }
             );
             unlinkSync(tmpDownloadPath);
