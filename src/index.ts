@@ -413,42 +413,42 @@ class Zztop extends Command {
   }
 
   async run() {
+    const { args, flags } = this.parse(Zztop);
+
+    await initializeImperative();
+
+    configure({
+      appenders: {
+        out: { type: "stdout" },
+        log: { type: "file", filename: "zztop.log" },
+      },
+      categories: {
+        default: { appenders: ["log"], level: flags.logLevel },
+        zztop: { appenders: ["log", "out"], level: flags.logLevel },
+        zztopRequest: { appenders: ["log"], level: flags.logLevel },
+      },
+    });
+
+    console.log = function () {
+      logger.warn("console.log", arguments);
+    };
+
+    this.log(
+      `All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`
+    );
+    this.log(`zztop version: ${this.config.version}`);
+    this.log(`Node.js version: ${process.version}`);
+    this.log("Zowe version:");
+    execSync("zowe --version", { stdio: "inherit" });
+
+    Error.stackTraceLimit = 100;
+
+    this.log(`Test definition file: ${args.file}`);
+    if (!existsSync(args.file)) {
+      this.error(`File ${resolve(args.file)} does not exist`);
+    }
+
     try {
-      const { args, flags } = this.parse(Zztop);
-
-      await initializeImperative();
-
-      configure({
-        appenders: {
-          out: { type: "stdout" },
-          log: { type: "file", filename: "zztop.log" },
-        },
-        categories: {
-          default: { appenders: ["log"], level: flags.logLevel },
-          zztop: { appenders: ["log", "out"], level: flags.logLevel },
-          zztopRequest: { appenders: ["log"], level: flags.logLevel },
-        },
-      });
-
-      console.log = function () {
-        logger.warn("console.log", arguments);
-      };
-
-      this.log(
-        `All logs are written to 'zztop.log' file. Console contains only a subset of messages. Log level is: ${flags.logLevel}`
-      );
-      this.log(`zztop version: ${this.config.version}`);
-      this.log(`Node.js version: ${process.version}`);
-      this.log("Zowe version:");
-      execSync("zowe --version", { stdio: "inherit" });
-
-      Error.stackTraceLimit = 100;
-
-      this.log(`Test definition file: ${args.file}`);
-      if (!existsSync(args.file)) {
-        this.error(`File ${resolve(args.file)} does not exist`);
-      }
-
       const testDefinition: TestDefinition = JSON.parse(
         readFileSync(args.file, "utf8")
       );
