@@ -1,16 +1,4 @@
-import { configure, getLogger } from "log4js";
 import { Command, flags } from "@oclif/command";
-import { existsSync, promises, readFileSync, Stats, unlinkSync } from "fs";
-import { join, resolve } from "path";
-import * as tmp from "tmp";
-import {
-  AbstractSession,
-  CliProfileManager,
-  Imperative,
-  ImperativeConfig,
-  IProfileLoaded,
-  Session,
-} from "@zowe/imperative";
 import {
   CheckStatus,
   Create,
@@ -28,8 +16,20 @@ import {
   Upload,
   ZosmfSession,
 } from "@zowe/cli";
+import {
+  AbstractSession,
+  CliProfileManager,
+  Imperative,
+  ImperativeConfig,
+  IProfileLoaded,
+  Session,
+} from "@zowe/imperative";
 import { execSync } from "child_process";
+import { existsSync, promises, readFileSync, unlinkSync } from "fs";
+import { configure, getLogger } from "log4js";
 import parse from "parse-duration";
+import { join, resolve } from "path";
+import * as tmp from "tmp";
 
 const filesizeParser = require("filesize-parser");
 const logger = getLogger("zztop");
