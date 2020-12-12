@@ -10,8 +10,6 @@ import {
   ImperativeConfig,
   IProfileLoaded,
   Session,
-  Logger,
-  LoggingConfigurer,
 } from "@zowe/imperative";
 import {
   CheckStatus,
